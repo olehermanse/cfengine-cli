@@ -270,7 +270,7 @@ def _process_markdown_code_blocks(
                     code_block["last_line"],
                 )
 
-            if syntax_check and "novalidate" not in code_block["flags"]:
+            if syntax_check and "novalidate" not in flags:
                 try:
                     fn_check_syntax(
                         origin_path,
@@ -286,10 +286,10 @@ def _process_markdown_code_blocks(
                         os.remove(snippet_path)
                     raise e
 
-            if output_check and "noexecute" not in code_block["flags"]:
+            if output_check and "noexecute" not in flags:
                 fn_check_output()
 
-            if autoformat and "noautoformat" not in code_block["flags"]:
+            if autoformat and "noautoformat" not in flags:
                 fn_autoformat(
                     origin_path,
                     snippet_path,
@@ -298,7 +298,7 @@ def _process_markdown_code_blocks(
                     code_block["last_line"],
                 )
 
-            if replace and "noreplace" not in code_block["flags"]:
+            if replace and "noreplace" not in flags:
                 offset = fn_replace(
                     origin_path,
                     snippet_path,
