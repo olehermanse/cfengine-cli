@@ -64,10 +64,12 @@ def lint_docs() -> int:
     return 1
 
 
-def generate_release_information() -> int:
+def generate_release_information(
+    omit_download=False, check=False, min_version=None
+) -> int:
     answer = _expect_repo("release-information")
     if answer:
-        generate_release_information_command()
+        generate_release_information_command(omit_download, check, min_version)
         return 0
     return 1
 
@@ -82,6 +84,8 @@ def dispatch_dev_subcommand(subcommand, args) -> int:
     if subcommand == "lint-docs":
         return lint_docs()
     if subcommand == "generate-release-information":
-        return generate_release_information()
+        return generate_release_information(
+            args.omit_download, args.check_against_git, args.minimum_version
+        )
 
     raise UserError("Invalid cfengine dev subcommand - " + subcommand)

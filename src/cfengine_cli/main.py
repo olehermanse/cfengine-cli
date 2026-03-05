@@ -87,7 +87,23 @@ def _get_arg_parser():
     )
     dev_subparsers.add_parser("format-docs")
     dev_subparsers.add_parser("lint-docs")
-    dev_subparsers.add_parser("generate-release-information")
+    parser = dev_subparsers.add_parser("generate-release-information")
+
+    parser.add_argument(
+        "--omit-download",
+        help="Use existing masterfiles instead of downloading in 'cfbs generate-release-information'",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--check-against-git",
+        help="Check whether masterfiles from cfengine.com and github.com match in 'cfbs generate-release-information'",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--from",
+        help="Specify minimum version in 'cfbs generate-release-information'",
+        dest="minimum_version",
+    )
 
     return ap
 
