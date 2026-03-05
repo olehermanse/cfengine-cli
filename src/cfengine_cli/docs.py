@@ -377,7 +377,6 @@ def update_docs() -> int:
 def check_docs() -> int:
     """
     Run checks / tests on docs.
-    Currently only JSON syntax checking.
 
     Run by the command:
     cfengine dev lint-docs"""
