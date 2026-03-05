@@ -50,10 +50,10 @@ def print_dependency_tables(args) -> int:
     return 1
 
 
-def format_docs() -> int:
+def format_docs(files) -> int:
     answer = _expect_repo("documentation")
     if answer:
-        return update_docs()
+        return update_docs(files)
     return 1
 
 
@@ -80,7 +80,7 @@ def dispatch_dev_subcommand(subcommand, args) -> int:
     if subcommand == "print-dependency-tables":
         return print_dependency_tables(args)
     if subcommand == "format-docs":
-        return format_docs()
+        return format_docs(args.files)
     if subcommand == "lint-docs":
         return lint_docs()
     if subcommand == "generate-release-information":
