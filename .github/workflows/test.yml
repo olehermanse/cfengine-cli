@@ -37,8 +37,7 @@ jobs:
           uv build
       - name: Install
         run: |
-          uv venv
-          uv sync
+          uv sync --frozen
           uv pip install .
       - name: Shell tests
         run: |
