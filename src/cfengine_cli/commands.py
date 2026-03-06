@@ -128,7 +128,7 @@ def _lint_single_arg(arg):
     return 0
 
 
-def lint(files) -> int:
+def _lint(files) -> int:
 
     if not files:
         return _lint_folder(".")
@@ -141,6 +141,15 @@ def lint(files) -> int:
     if errors == 0:
         return 0
     return 1
+
+
+def lint(files) -> int:
+    errors = _lint(files)
+    if errors == 0:
+        print("Success, no errors found.")
+    else:
+        print(f"Failure, {errors} errors in total.")
+    return errors
 
 
 def report() -> int:
