@@ -85,8 +85,10 @@ def _get_arg_parser():
         nargs="+",
         help="Versions to compare (minimum 1 required)",
     )
-    dev_subparsers.add_parser("format-docs")
-    dev_subparsers.add_parser("lint-docs")
+    parser = dev_subparsers.add_parser("format-docs")
+    parser.add_argument("files", nargs="*")
+    parser = dev_subparsers.add_parser("lint-docs")
+    parser.add_argument("files", nargs="*")
     parser = dev_subparsers.add_parser("generate-release-information")
 
     parser.add_argument(

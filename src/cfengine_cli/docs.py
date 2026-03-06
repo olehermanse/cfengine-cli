@@ -14,6 +14,7 @@ import subprocess
 
 import markdown_it
 from cfbs.pretty import pretty_file
+from cfbs.utils import find
 
 from cfengine_cli.lint import lint_policy_file
 from cfengine_cli.utils import UserError
@@ -270,7 +271,7 @@ def _process_markdown_code_blocks(
                     code_block["last_line"],
                 )
 
-            if syntax_check and "novalidate" not in code_block["flags"]:
+            if syntax_check and "novalidate" not in flags:
                 try:
                     fn_check_syntax(
                         origin_path,
@@ -286,10 +287,10 @@ def _process_markdown_code_blocks(
                         os.remove(snippet_path)
                     raise e
 
-            if output_check and "noexecute" not in code_block["flags"]:
+            if output_check and "noexecute" not in flags:
                 fn_check_output()
 
-            if autoformat and "noautoformat" not in code_block["flags"]:
+            if autoformat and "noautoformat" not in flags:
                 fn_autoformat(
                     origin_path,
                     snippet_path,
@@ -298,7 +299,7 @@ def _process_markdown_code_blocks(
                     code_block["last_line"],
                 )
 
-            if replace and "noreplace" not in code_block["flags"]:
+            if replace and "noreplace" not in flags:
                 offset = fn_replace(
                     origin_path,
                     snippet_path,
@@ -311,16 +312,15 @@ def _process_markdown_code_blocks(
                 os.remove(snippet_path)
 
 
-def _run_black():
-    path = "."
-    assert os.path.isdir(path)
+def _run_black(path):
+    print(f"Formatting '{path}' with black...")
     try:
         subprocess.run(
             ["black", path],
             capture_output=True,
             text=True,
             check=True,
-            cwd=path,
+            cwd=".",
         )
     except:
         raise UserError(
@@ -328,16 +328,32 @@ def _run_black():
         )
 
 
-def _run_prettier():
-    path = "."
-    assert os.path.isdir(path)
+def _run_prettier(path):
+    assert os.path.exists(path)
+
+    args = [path]
+    directory = "."
+
+    assert os.path.isdir(path) or os.path.isfile(path)
+    if os.path.isdir(path):
+        directory = path
+        args = []
+        if any(find(path, extension=".markdown")):
+            args.append("**.markdown")
+        if any(find(path, extension=".md")):
+            args.append("**.md")
+        if not args:
+            return
     try:
+        # Warning: Beware of shell expansion if you try to run this in your terminal.
+        # Wrong: prettier --write **.markdown **.md
+        # Right: prettier --write '**.markdown' '**.md'
         subprocess.run(
-            ["prettier", "--write", "**.markdown", "**.md"],
+            ["prettier", "--embedded-language-formatting", "off", "--write", *args],
             capture_output=True,
             text=True,
             check=True,
-            cwd=path,
+            cwd=directory,
         )
     except:
         raise UserError(
@@ -345,9 +361,32 @@ def _run_prettier():
         )
 
 
-def update_docs() -> int:
+def _update_docs_single_arg(path):
+    if not os.path.exists(path):
+        raise UserError(f"The specified file/folder '{path}' does not exist")
+    if not os.path.isfile(path) and not os.path.isdir(path):
+        raise UserError(f"Argument '{path}' is not a file or a folder")
+
+    if os.path.isdir(path) or path.endswith(".py"):
+        _run_black(path)
+    if os.path.isdir(path) or path.endswith((".md", ".markdown")):
+        _run_prettier(path)
+        print(f"Formatting code blocks in '{path}'...")
+        _process_markdown_code_blocks(
+            path=path,
+            languages=["json"],  # TODO: Add cfengine3 here
+            extract=True,
+            syntax_check=False,
+            output_check=False,
+            autoformat=True,
+            replace=True,
+            cleanup=True,
+        )
+
+
+def update_docs(paths) -> int:
     """
-    Iterate through entire docs repo (.), autoformatting as much as possible:
+    Iterate through entire docs repo, or specified subfolders / files, autoformatting as much as possible:
     - python code with black
     - markdown files with prettier
     - code blocks inside markdown files are formatted for the formats supported by prettier
@@ -356,28 +395,17 @@ def update_docs() -> int:
     Run by the command:
     cfengine dev format-docs
     """
-    print("Formatting python files with black...")
-    _run_black()
-    print("Formatting markdown files with prettier...")
-    _run_prettier()
-    print("Formatting markdown code blocks according to our rules...")
-    _process_markdown_code_blocks(
-        path=".",
-        languages=["json"],  # TODO: Add cfengine3 here
-        extract=True,
-        syntax_check=False,
-        output_check=False,
-        autoformat=True,
-        replace=True,
-        cleanup=True,
-    )
+    if not paths:
+        _update_docs_single_arg(".")
+        return 0
+    for path in paths:
+        _update_docs_single_arg(path)
     return 0
 
 
 def check_docs() -> int:
     """
     Run checks / tests on docs.
-    Currently only JSON syntax checking.
 
     Run by the command:
     cfengine dev lint-docs"""
