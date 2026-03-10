@@ -162,7 +162,6 @@ def _walk(filename, lines, node) -> int:
 def lint_policy_file(
     filename, original_filename=None, original_line=None, snippet=None, prefix=None
 ):
-    print(f"Linting: {filename}")
     assert original_filename is None or type(original_filename) is str
     assert original_line is None or type(original_line) is int
     assert snippet is None or type(snippet) is int
