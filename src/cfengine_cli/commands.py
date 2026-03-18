@@ -124,8 +124,7 @@ def _lint_single_arg(arg):
     if os.path.isdir(arg):
         return _lint_folder(arg)
     assert os.path.isfile(arg)
-    _lint_single_file(arg)
-    return 0
+    return _lint_single_file(arg)
 
 
 def _lint(files) -> int:
@@ -138,9 +137,7 @@ def _lint(files) -> int:
     for file in files:
         errors += _lint_single_arg(file)
 
-    if errors == 0:
-        return 0
-    return 1
+    return errors
 
 
 def lint(files) -> int:
