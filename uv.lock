@@ -67,7 +67,7 @@ requires-dist = [
     { name = "cfbs", specifier = ">=5.5.0" },
     { name = "markdown-it-py", specifier = ">=3.0.0" },
     { name = "tree-sitter", specifier = ">=0.25" },
-    { name = "tree-sitter-cfengine", specifier = ">=1.0.12" },
+    { name = "tree-sitter-cfengine", specifier = ">=1.1.5" },
 ]
 
 [package.metadata.requires-dev]
@@ -420,17 +420,18 @@ wheels = [
 
 [[package]]
 name = "tree-sitter-cfengine"
-version = "1.0.12"
+version = "1.1.5"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/73/68/9a523138eaea81dfcbf05568b2d28247c7bc580473a5001d68972b055661/tree_sitter_cfengine-1.0.12.tar.gz", hash = "sha256:312f8b5c584ab4a5e4620b3f12aede8011e7a31c3b6a3b769e00d1448773785d", size = 15160, upload-time = "2025-08-07T12:46:45.917Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/29/65/53ec50812f582e0c602f7d6791a1c6fd5eb5c330653bd25e68ecb88a6501/tree_sitter_cfengine-1.1.5.tar.gz", hash = "sha256:1701c4fa177ef1fe4160890e88c4af0a04f998c514c94d807c09bdc3b86c93ca", size = 15479, upload-time = "2026-03-20T16:12:48.243Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/f7/20a18d0e64034e64998c46f6b39b48b544314e286fc4d31080c4ddd2ced3/tree_sitter_cfengine-1.0.12-cp39-abi3-macosx_10_9_x86_64.whl", hash = "sha256:3906fa402bc7cc8c97e1db6e5bd5e116f027c043826f109d524556798bb478c0", size = 12272, upload-time = "2025-08-07T12:46:38.358Z" },
-    { url = "https://files.pythonhosted.org/packages/08/13/90520939609fa0240ef7f3edd9c83f9b193cdb1ed97939c61547701c3eae/tree_sitter_cfengine-1.0.12-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:9ed53cff54ba31de420ade9ec74f3e18b0f1c4407c1e055e7899eebaf8250555", size = 12613, upload-time = "2025-08-07T12:46:39.331Z" },
-    { url = "https://files.pythonhosted.org/packages/03/2f/34735ddb8ad59721fba58169c8e7dad3a5db5f28a817264fbf8c525447b3/tree_sitter_cfengine-1.0.12-cp39-abi3-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:876044c5ac6cff81bafe1818f61a5cb5bbe1b761535d096816cb7b05d8ebecba", size = 23018, upload-time = "2025-08-07T12:46:40.678Z" },
-    { url = "https://files.pythonhosted.org/packages/eb/1b/6bbd88fb3f54b84a7d9a49173534b964a2f7985758f334addd698069a188/tree_sitter_cfengine-1.0.12-cp39-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:1c7afb31a8525ee4a8b7dbd55471f25ff9a39a491fc82690774c6a291dcac0b8", size = 24548, upload-time = "2025-08-07T12:46:41.822Z" },
-    { url = "https://files.pythonhosted.org/packages/8d/e8/3c03a654333c7067ffb7b50e1bfc67b4fc1164a273edc68e86ee41ea3beb/tree_sitter_cfengine-1.0.12-cp39-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:74a40c0497e79173c45422fadaa0640f9cf3d394e895256237dd2ffe56955e7a", size = 22840, upload-time = "2025-08-07T12:46:42.902Z" },
-    { url = "https://files.pythonhosted.org/packages/45/7d/aecd66b65373dbb27abd35997617b848a14f815ab12d824b0a23f0c0501e/tree_sitter_cfengine-1.0.12-cp39-abi3-win_amd64.whl", hash = "sha256:beba35425906166f1473ea7491a6a03b3349caba399a09435bfb122da318ad1d", size = 15212, upload-time = "2025-08-07T12:46:44.051Z" },
-    { url = "https://files.pythonhosted.org/packages/ff/50/25244963e59ccb40f0fdb0e3a1ab63134cc8a3f04be4dbb4ff71d4d0a7e1/tree_sitter_cfengine-1.0.12-cp39-abi3-win_arm64.whl", hash = "sha256:c2d3c5c1b89504cbe65e3a4b950700e8928eb09a370a303eb986462be3e82d0b", size = 14047, upload-time = "2025-08-07T12:46:45.199Z" },
+    { url = "https://files.pythonhosted.org/packages/58/9c/4b69ac306f65234f3ca8ab289bc0cc69f9a79759e2f0346c8d7b64801dd1/tree_sitter_cfengine-1.1.5-cp39-abi3-macosx_10_9_x86_64.whl", hash = "sha256:41fc334eeee71f93e9f6d9f0e973dd8dec587977602daca6fd286f36295cc5ea", size = 12432, upload-time = "2026-03-20T16:12:41.628Z" },
+    { url = "https://files.pythonhosted.org/packages/0e/60/e6d4260933219942994389e3ad63c8c148c36e8cfdd844b59f033918da7e/tree_sitter_cfengine-1.1.5-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:86023b44b722cb7bed29fa93dcbd2d9d508e82549561018fbbad43ac238a205f", size = 13023, upload-time = "2026-03-20T16:12:42.718Z" },
+    { url = "https://files.pythonhosted.org/packages/b2/b7/98b0d44872514dcd9379870316aa49388b4f3ef863f99e63df0dd82160e1/tree_sitter_cfengine-1.1.5-cp39-abi3-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:28598d6f676649739313df0f6da588ca061c3b71d1e014524b3ed567198f69dd", size = 24502, upload-time = "2026-03-20T16:12:43.469Z" },
+    { url = "https://files.pythonhosted.org/packages/4d/06/e3838b998001e0f3175129b8c93ffd0d8d943e845a7c22551b6a61261ffd/tree_sitter_cfengine-1.1.5-cp39-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:08224d3f888c1865a736da3750c26f0984da26c67d3f30140e48739970d64f22", size = 25999, upload-time = "2026-03-20T16:12:44.492Z" },
+    { url = "https://files.pythonhosted.org/packages/b8/21/1593c7eb4132800b52fd56eef979d76b6c60550c5084ea1bf18d9aedcea9/tree_sitter_cfengine-1.1.5-cp39-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:f98d1d9467c53f0bcde3edc3aec05355839774cf22ded3a4bdf27a7c4924ee89", size = 25103, upload-time = "2026-03-20T16:12:45.227Z" },
+    { url = "https://files.pythonhosted.org/packages/6a/4e/4c414541ff47d2faaa5c83a42e678d95016f2cb6b405fac376d71b74d8f9/tree_sitter_cfengine-1.1.5-cp39-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:a0355526c5d9ed082d1f9295bfcb147abbb20632330f602404e850185a206c4f", size = 24288, upload-time = "2026-03-20T16:12:45.999Z" },
+    { url = "https://files.pythonhosted.org/packages/ca/7c/66de2a10639e14fbd10690dcaa27f7e765abfc180999d84912269d08e0da/tree_sitter_cfengine-1.1.5-cp39-abi3-win_amd64.whl", hash = "sha256:f6f243cd4db0f9cb5a23a34d4579019a367ad3c43b6e8685599295f8e76c7866", size = 15409, upload-time = "2026-03-20T16:12:46.725Z" },
+    { url = "https://files.pythonhosted.org/packages/98/8c/1a341497969015658eae465fddda0016dd58c8be677f5f613d45a48e4b79/tree_sitter_cfengine-1.1.5-cp39-abi3-win_arm64.whl", hash = "sha256:60cea14d83f317bbe03dc57a9226da402beb181bbe53ad2f4b8be7162d59c039", size = 14293, upload-time = "2026-03-20T16:12:47.497Z" },
 ]
 
 [[package]]
