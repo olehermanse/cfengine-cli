@@ -18,41 +18,12 @@ from tree_sitter import Language, Parser
 from cfbs.validate import validate_config
 from cfbs.cfbs_config import CFBSConfig
 from cfbs.utils import find
-
-DEPRECATED_PROMISE_TYPES = ["defaults", "guest_environments"]
-ALLOWED_BUNDLE_TYPES = ["agent", "common", "monitor", "server", "edit_line", "edit_xml"]
-BUILTIN_PROMISE_TYPES = {
-    "access",
-    "build_xpath",
-    "classes",
-    "commands",
-    "databases",
-    "defaults",
-    "delete_attribute",
-    "delete_lines",
-    "delete_text",
-    "delete_tree",
-    "field_edits",
-    "files",
-    "guest_environments",
-    "insert_lines",
-    "insert_text",
-    "insert_tree",
-    "measurements",
-    "meta",
-    "methods",
-    "packages",
-    "processes",
-    "replace_patterns",
-    "reports",
-    "roles",
-    "services",
-    "set_attribute",
-    "set_text",
-    "storage",
-    "users",
-    "vars",
-}
+from cfengine_cli.policy_language import (
+    DEPRECATED_PROMISE_TYPES,
+    ALLOWED_BUNDLE_TYPES,
+    BUILTIN_PROMISE_TYPES,
+    BUILTIN_FUNCTIONS,
+)
 
 
 def lint_cfbs_json(filename) -> int:
@@ -129,7 +100,7 @@ def _find_nodes(filename, lines, node):
     return matches
 
 
-def _single_node_checks(filename, lines, node, custom_promise_types, strict):
+def _single_node_checks(filename, lines, node, user_definition, strict):
     """Things which can be checked by only looking at one node,
     not needing to recurse into children."""
     line = node.range.start_point[0] + 1
@@ -150,7 +121,12 @@ def _single_node_checks(filename, lines, node, custom_promise_types, strict):
             )
             return 1
         if strict and (
-            (promise_type not in BUILTIN_PROMISE_TYPES.union(custom_promise_types))
+            (
+                promise_type
+                not in BUILTIN_PROMISE_TYPES.union(
+                    user_definition.get("custom_promise_types", set())
+                )
+            )
         ):
             _highlight_range(node, lines)
             print(
@@ -179,13 +155,25 @@ def _single_node_checks(filename, lines, node, custom_promise_types, strict):
                 f"Error: Bundle type must be one of ({', '.join(ALLOWED_BUNDLE_TYPES)}), not '{_text(node)}' at {filename}:{line}:{column}"
             )
             return 1
-
+    if node.type == "calling_identifier":
+        if strict and (
+            _text(node)
+            not in BUILTIN_FUNCTIONS.union(
+                user_definition.get("all_bundle_names", set()),
+                user_definition.get("all_body_names", set()),
+            )
+        ):
+            _highlight_range(node, lines)
+            print(
+                f"Error: Call to unknown function / bundle / body '{_text(node)}' at at {filename}:{line}:{column}"
+            )
+            return 1
     return 0
 
 
-def _walk(filename, lines, node, custom_promise_types=None, strict=True) -> int:
-    if custom_promise_types is None:
-        custom_promise_types = set()
+def _walk(filename, lines, node, user_definition=None, strict=True) -> int:
+    if user_definition is None:
+        user_definition = {}
 
     error_nodes = _find_node_type(filename, lines, node, "ERROR")
     if error_nodes:
@@ -201,18 +189,21 @@ def _walk(filename, lines, node, custom_promise_types=None, strict=True) -> int:
 
     errors = 0
     for node in _find_nodes(filename, lines, node):
-        errors += _single_node_checks(
-            filename, lines, node, custom_promise_types, strict
-        )
+        errors += _single_node_checks(filename, lines, node, user_definition, strict)
 
     return errors
 
 
-def _parse_custom_types(filename, lines, root_node):
-    ret = set()
+def _parse_user_definition(filename, lines, root_node):
     promise_blocks = _find_node_type(filename, lines, root_node, "promise_block_name")
-    ret.update(_text(x) for x in promise_blocks)
-    return ret
+    bundle_blocks = _find_node_type(filename, lines, root_node, "bundle_block_name")
+    body_blocks = _find_node_type(filename, lines, root_node, "body_block_name")
+
+    return {
+        "custom_promise_types": {_text(x) for x in promise_blocks},
+        "all_bundle_names": {_text(x) for x in bundle_blocks},
+        "all_body_names": {_text(x) for x in body_blocks},
+    }
 
 
 def _parse_policy_file(filename):
@@ -234,7 +225,7 @@ def lint_policy_file(
     original_line=None,
     snippet=None,
     prefix=None,
-    custom_promise_types=None,
+    user_definition=None,
     strict=True,
 ):
     assert original_filename is None or type(original_filename) is str
@@ -251,8 +242,8 @@ def lint_policy_file(
     assert os.path.isfile(filename)
     assert filename.endswith((".cf", ".cfengine3", ".cf3", ".cf.sub"))
 
-    if custom_promise_types is None:
-        custom_promise_types = set()
+    if user_definition is None:
+        user_definition = {}
 
     tree, lines, original_data = _parse_policy_file(filename)
     root_node = tree.root_node
@@ -284,7 +275,7 @@ def lint_policy_file(
         else:
             print(f"Error: Empty policy file '{filename}'")
         errors += 1
-    errors += _walk(filename, lines, root_node, custom_promise_types, strict)
+    errors += _walk(filename, lines, root_node, user_definition, strict)
     if prefix:
         print(prefix, end="")
     if errors == 0:
@@ -323,34 +314,33 @@ def lint_folder(folder, strict=True):
         else:
             errors += lint_single_file(filename)
 
-    custom_promise_types = set()
+    user_definition = {}
 
     # First pass: Gather custom types
     for filename in policy_files if strict else []:
         tree, lines, _ = _parse_policy_file(filename)
         if tree.root_node.type == "source_file":
-            custom_promise_types.update(
-                _parse_custom_types(filename, lines, tree.root_node)
-            )
+            for key, val in _parse_user_definition(
+                filename, lines, tree.root_node
+            ).items():
+                user_definition[key] = user_definition.get(key, set()).union(val)
 
     # Second pass: lint all policy files
     for filename in policy_files:
         errors += lint_policy_file(
-            filename, custom_promise_types=custom_promise_types, strict=strict
+            filename, user_definition=user_definition, strict=strict
         )
     return errors
 
 
-def lint_single_file(file, custom_promise_types=None, strict=True):
+def lint_single_file(file, user_definition=None, strict=True):
     assert os.path.isfile(file)
     if file.endswith("/cfbs.json"):
         return lint_cfbs_json(file)
     if file.endswith(".json"):
         return lint_json(file)
     assert file.endswith(".cf")
-    return lint_policy_file(
-        file, custom_promise_types=custom_promise_types, strict=strict
-    )
+    return lint_policy_file(file, user_definition=user_definition, strict=strict)
 
 
 def lint_single_arg(arg, strict=True):

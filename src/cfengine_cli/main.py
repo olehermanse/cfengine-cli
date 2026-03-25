@@ -56,7 +56,7 @@ def _get_arg_parser():
         "--strict",
         type=str,
         default="yes",
-        help="Strict mode. Default=yes, checks for undefined promisetypes",
+        help="Strict mode. Default=yes, checks for undefined promise types, bundles, bodies, functions",
     )
     lnt.add_argument("files", nargs="*", help="Files to format")
     subp.add_parser(
