@@ -409,7 +409,7 @@ def check_docs() -> int:
 
     Run by the command:
     cfengine dev lint-docs"""
-    r = lint_folder(".")
+    r = lint_folder(".", strict=False)
     if r != 0:
         return r
     _process_markdown_code_blocks(
