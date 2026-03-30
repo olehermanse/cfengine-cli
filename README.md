@@ -47,6 +47,23 @@ cfengine format
 cfengine lint
 ```
 
+You can also specify filenames or folders;
+
+```bash
+cfengine lint main.cf
+```
+
+When it finds a mistake, it points out where the problem is like this;
+
+```
+    "Hello, CFEngine"
+      ifvarclass => "cfengine";
+      ^--------^
+Deprecation: Use 'if' instead of 'ifvarclass' at main.cf:5:7
+FAIL: main.cf (1 errors)
+Failure, 1 errors in total.
+```
+
 Note that since we use a different parser than `cf-agent` / `cf-promises`, they are not 100% in sync.
 `cf-agent` could point out something as a syntax error, while `cfengine lint` does not and vice versa.
 We aim to make the tree-sitter parser (used in this tool) more strict in general, so that when `cfengine lint` is happy with your policy, `cf-agent` will also accept it.
