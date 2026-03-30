@@ -396,4 +396,4 @@ def lint_single_arg(arg, strict=True):
         return lint_folder(arg, strict)
     assert os.path.isfile(arg)
 
-    return lint_single_file(arg, strict)
+    return lint_single_file(arg, strict=strict)
