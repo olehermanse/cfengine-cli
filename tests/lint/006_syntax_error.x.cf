@@ -1,0 +1,5 @@
+bundle agent main
+{
+  reports
+    "Missing colon after promise type";
+}

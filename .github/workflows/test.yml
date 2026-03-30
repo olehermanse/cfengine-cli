@@ -47,3 +47,7 @@ jobs:
         run: |
           source .venv/bin/activate
           bash tests/run-format-tests.sh
+      - name: Lint tests
+        run: |
+          source .venv/bin/activate
+          bash tests/run-lint-tests.sh
