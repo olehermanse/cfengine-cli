@@ -1,0 +1,5 @@
+bundle common my_bundle
+{
+  vars:
+    "x" string => "value";
+}
