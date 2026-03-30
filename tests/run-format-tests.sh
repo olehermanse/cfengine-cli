@@ -8,12 +8,13 @@ echo "TODO: Uncomment set -e to make tests start failing"
 echo "These tests expect cfengine CLI to be installed globally or in venv"
 
 echo "Looking for CFEngine CLI:"
-which cfengine
+cfengine --version
 
 echo "Check that input and expected files exist:"
 ls -al tests/format/*.input.cf
 ls -al tests/format/*.expected.cf
 
+rm -rf tmp
 mkdir -p tmp
 
 echo "Check that input files match expected files:"
