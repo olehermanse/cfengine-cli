@@ -1,0 +1,6 @@
+bundle agent main
+{
+  reports:
+    "Hello, CFEngine"
+      ifvarclass => "cfengine";
+}
