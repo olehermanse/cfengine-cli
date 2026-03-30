@@ -6,11 +6,12 @@ set -e
 echo "These tests expect cfengine CLI to be installed globally or in venv"
 
 echo "Looking for CFEngine CLI:"
-which cfengine
+cfengine --version
 
 echo "Check that test files are in expected location:"
 ls -al tests/lint/*.cf
 
+rm -rf tmp
 mkdir -p tmp
 
 echo "Run lint tests:"
