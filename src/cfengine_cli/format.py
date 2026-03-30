@@ -60,10 +60,6 @@ def stringify_children(children):
             result += " "
         if previous and previous.type == "=>":
             result += " "
-        if previous and previous.type == "{":
-            result += " "
-        if previous and child.type == "}":
-            result += " "
         result += string
         previous = child
     return result
@@ -75,8 +71,11 @@ def stringify_single_line(node):
     return stringify_children(node.children)
 
 
-def split_generic_value(node, indent):
-    # TODO
+def split_generic_value(node, indent, line_length):
+    if node.type == "call":
+        return split_rval_call(node, indent, line_length)
+    if node.type == "list":
+        return split_rval_list(node, indent, line_length)
     return [stringify_single_line(node)]
 
 
@@ -90,7 +89,7 @@ def split_generic_list(middle, indent, line_length):
         if len(line) < line_length:
             elements.append(line)
         else:
-            lines = split_generic_value(element, indent)
+            lines = split_generic_value(element, indent, line_length)
             elements.append(" " * indent + lines[0])
             elements.extend(lines[1:])
     return elements
@@ -151,15 +150,17 @@ def attempt_split_attribute(node, indent, line_length):
         lines = maybe_split_rval(rval, indent, offset, line_length)
         lines[0] = prefix + lines[0]
         return lines
-    return [stringify_single_line(node)]
+    return [" " * indent + stringify_single_line(node)]
 
 
 def stringify(node, indent, line_length):
     single_line = " " * indent + stringify_single_line(node)
-    if len(single_line) < line_length:
+    # Reserve 1 char for trailing ; or , after attributes
+    effective_length = line_length - 1 if node.type == "attribute" else line_length
+    if len(single_line) < effective_length:
         return [single_line]
     if node.type == "attribute":
-        return attempt_split_attribute(node, indent, line_length)
+        return attempt_split_attribute(node, indent, line_length - 1)
     return [single_line]
 
 
@@ -178,14 +179,18 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
     if node.type in ["bundle_block", "promise_block", "body_block"]:
         line = " ".join(x.text.decode("utf-8") for x in node.children[0:-1])
         if not fmt.empty:
-            fmt.print("", 0)
+            prev_sib = node.prev_named_sibling
+            if not (prev_sib and prev_sib.type == "comment"):
+                fmt.print("", 0)
         fmt.print(line, 0)
         children = node.children[-1].children
     if node.type in [
         "bundle_section",
         "class_guarded_promises",
         "class_guarded_body_attributes",
+        "class_guarded_promise_block_attributes",
         "promise",
+        "half_promise",
         "attribute",
     ]:
         indent += 2
@@ -193,12 +198,86 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
         lines = stringify(node, indent, line_length)
         fmt.print_lines(lines, indent=0)
         return
+    if node.type == "promise":
+        # Single-line promise: if exactly 1 attribute, no half_promise continuation,
+        # and the whole line fits in line_length
+        attr_children = [c for c in children if c.type == "attribute"]
+        next_sib = node.next_named_sibling
+        has_continuation = next_sib and next_sib.type == "half_promise"
+        if len(attr_children) == 1 and not has_continuation:
+            promiser_node = next((c for c in children if c.type == "promiser"), None)
+            if promiser_node:
+                line = (
+                    text(promiser_node)
+                    + " "
+                    + stringify_single_line(attr_children[0])
+                    + ";"
+                )
+                if indent + len(line) <= line_length:
+                    fmt.print(line, indent)
+                    return
     if children:
         for child in children:
+            # Blank line between promises in a section
+            if child.type == "promise":
+                prev = child.prev_named_sibling
+                if prev and prev.type in ["promise", "half_promise"]:
+                    fmt.print("", 0)
+            elif child.type in [
+                "class_guarded_promises",
+                "class_guarded_body_attributes",
+                "class_guarded_promise_block_attributes",
+            ]:
+                prev = child.prev_named_sibling
+                if prev and prev.type in [
+                    "promise",
+                    "half_promise",
+                ]:
+                    fmt.print("", 0)
+            elif child.type == "comment":
+                prev = child.prev_named_sibling
+                if prev and prev.type in ["promise", "half_promise"]:
+                    parent = child.parent
+                    if parent and parent.type in [
+                        "bundle_section",
+                        "class_guarded_promises",
+                    ]:
+                        fmt.print("", 0)
             autoformat(child, fmt, line_length, macro_indent, indent)
         return
     if node.type in [",", ";"]:
         fmt.print_same_line(node)
+        return
+    if node.type == "comment":
+        comment_indent = indent
+        next_sib = node.next_named_sibling
+        while next_sib and next_sib.type == "comment":
+            next_sib = next_sib.next_named_sibling
+        if next_sib is None:
+            prev_sib = node.prev_named_sibling
+            while prev_sib and prev_sib.type == "comment":
+                prev_sib = prev_sib.prev_named_sibling
+            if prev_sib and prev_sib.type in [
+                "bundle_section",
+                "class_guarded_promises",
+                "class_guarded_body_attributes",
+                "class_guarded_promise_block_attributes",
+                "promise",
+                "half_promise",
+                "attribute",
+            ]:
+                comment_indent = indent + 2
+        elif next_sib.type in [
+            "bundle_section",
+            "class_guarded_promises",
+            "class_guarded_body_attributes",
+            "class_guarded_promise_block_attributes",
+            "promise",
+            "half_promise",
+            "attribute",
+        ]:
+            comment_indent = indent + 2
+        fmt.print(node, comment_indent)
         return
     fmt.print(node, indent)
 
