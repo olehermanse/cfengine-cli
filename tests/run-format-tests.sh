@@ -1,8 +1,6 @@
 #/usr/bin/env bash
 
-echo "TODO: Uncomment set -e to make tests start failing"
-
-# set -e
+set -e
 # set -x
 
 echo "These tests expect cfengine CLI to be installed globally or in venv"
