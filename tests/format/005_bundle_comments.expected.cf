@@ -1,0 +1,49 @@
+bundle agent a
+# @brief Description of a
+{
+  reports:
+    "Hello, world!";
+}
+
+bundle agent b
+# @brief Description of b
+# @note Something important
+{
+  reports:
+    "Hello, world!";
+}
+
+bundle agent c
+# @brief Description of c
+# @note Something important
+{
+  reports:
+    "Hello, world!";
+}
+
+bundle agent d
+# @brief Description of d
+# @note Something important
+{
+  reports:
+    "Hello, world!";
+}
+
+bundle agent e
+# keyword
+# type
+# name
+{
+  reports:
+    "Hello, world!";
+}
+
+bundle agent f(s, d, o, p)
+# source - where to copy from
+# destination - folder or file path
+# owner - root, nick
+# perms - 0677
+{
+  reports:
+    "Hello, world!";
+}
