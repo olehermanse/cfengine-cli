@@ -1,6 +1,5 @@
 # This shows some basics of policy language, without getting
 # too deep into edge cases and wrappting etc.
-
 body common control
 {
   inputs => {"/var/cfengine/inputs/some_file.cf"};
@@ -24,6 +23,7 @@ bundle agent main
     "foo"
       if => "bar"
       string => "some_value";
+
     baz::
       "bam"
         if => "bar"
