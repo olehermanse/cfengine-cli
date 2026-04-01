@@ -49,6 +49,25 @@ class Formatter:
         return tmp
 
 
+def stringify_children_from_strings(parts):
+    # Remove trailing comma before closing paren
+    cleaned = []
+    for i, part in enumerate(parts):
+        if part == "," and i + 1 < len(parts) and parts[i + 1] == ")":
+            continue
+        cleaned.append(part)
+    result = ""
+    previous = None
+    for part in cleaned:
+        if previous and previous != "(" and part != "," and part != ")":
+            result += " "
+        elif previous == ",":
+            result += " "
+        result += part
+        previous = part
+    return result
+
+
 def stringify_children(children):
     result = ""
     previous = None
@@ -177,12 +196,32 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
         return
     children = node.children
     if node.type in ["bundle_block", "promise_block", "body_block"]:
-        line = " ".join(x.text.decode("utf-8") for x in node.children[0:-1])
+        header_parts = []
+        header_comments = []
+        for x in node.children[0:-1]:
+            if x.type == "comment":
+                header_comments.append(text(x))
+            elif x.type == "parameter_list":
+                parts = []
+                for p in x.children:
+                    if p.type == "comment":
+                        header_comments.append(text(p))
+                    else:
+                        parts.append(text(p))
+                # Append directly to previous part (no space before parens)
+                header_parts[-1] = header_parts[-1] + stringify_children_from_strings(
+                    parts
+                )
+            else:
+                header_parts.append(text(x))
+        line = " ".join(header_parts)
         if not fmt.empty:
             prev_sib = node.prev_named_sibling
             if not (prev_sib and prev_sib.type == "comment"):
                 fmt.print("", 0)
         fmt.print(line, 0)
+        for comment in header_comments:
+            fmt.print(comment, 0)
         children = node.children[-1].children
     if node.type in [
         "bundle_section",
