@@ -209,7 +209,9 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
                     else:
                         parts.append(text(p))
                 # Append directly to previous part (no space before parens)
-                header_parts[-1] = header_parts[-1] + stringify_children_from_strings(parts)
+                header_parts[-1] = header_parts[-1] + stringify_children_from_strings(
+                    parts
+                )
             else:
                 header_parts.append(text(x))
         line = " ".join(header_parts)
