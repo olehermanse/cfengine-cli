@@ -50,6 +50,17 @@ class Formatter:
 
 
 def stringify_children_from_strings(parts):
+    """Join pre-extracted string tokens into a formatted parameter list.
+
+    Used when formatting bundle/body headers. Comments are
+    stripped from the parameter_list node before this function is called,
+    so `parts` contains only the structural tokens: "(", identifiers, ","
+    separators, and ")".  The function removes any trailing comma before
+    ")", then joins the tokens with appropriate spacing (space after each
+    comma, no space after "(" or before ")").
+
+    Example: ["(", "a", ",", "b", ",", ")"] -> "(a, b)"
+    """
     # Remove trailing comma before closing paren
     cleaned = []
     for i, part in enumerate(parts):
@@ -69,6 +80,19 @@ def stringify_children_from_strings(parts):
 
 
 def stringify_children(children):
+    """Join a list of tree-sitter nodes into a single-line string.
+
+    Operates on the direct child nodes of a CFEngine syntax construct
+    (e.g. a list, call, or attribute). Each child is recursively
+    flattened via stringify_single_line(). Spacing rules:
+      - A space is inserted after each "," separator.
+      - A space is inserted before and after "=>" (fat arrow).
+      - No extra space otherwise (e.g. no space after "(" or before ")").
+
+    Used by stringify_single_line() to recursively flatten any node with
+    children, and by maybe_split_generic_list() to attempt a single-line
+    rendering before falling back to multi-line splitting.
+    """
     result = ""
     previous = None
     for child in children:
