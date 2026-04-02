@@ -60,8 +60,8 @@ When it finds a mistake, it points out where the problem is like this;
       ifvarclass => "cfengine";
       ^--------^
 Deprecation: Use 'if' instead of 'ifvarclass' at main.cf:5:7
-FAIL: main.cf (1 errors)
-Failure, 1 errors in total.
+FAIL: main.cf (1 error)
+Failure, 1 error in total.
 ```
 
 Note that since we use a different parser than `cf-agent` / `cf-promises`, they are not 100% in sync.
