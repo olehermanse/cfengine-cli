@@ -4,6 +4,7 @@ default: check
 
 format:
 	uv tool run black .
+	prettier . --write
 
 lint:
 	uv tool run black --check .
@@ -20,3 +21,7 @@ check: format lint install
 	bash tests/run-lint-tests.sh
 	bash tests/run-format-tests.sh
 	bash tests/run-shell-tests.sh
+
+install:
+	git fetch --all --tags
+	pipx install --force --editable .

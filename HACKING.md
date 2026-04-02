@@ -4,6 +4,53 @@ This document aims to have relevant information for people contributing to and m
 It is not necessary for users of the tool to know about these processes.
 For general user information, see the [README](./README.md).
 
+## Code formatting
+
+We use automated code formatters to ensure consistent code style / indentation.
+Please format Python code with [black](https://pypi.org/project/black/), and YAML and markdown files with [Prettier](https://prettier.io/).
+For simplicity's sake, we don't have a custom configuration, we use the tool's defaults.
+
+If your editor does not do this automatically, you can run these tools from the command line:
+
+```bash
+make format
+```
+
+## Installing from source:
+
+For developers working on CFEngine CLI, it is recommended to install an editable version of the tool:
+
+```bash
+make install
+```
+
+Some of the tests require that you have the CLI installed (they run `cfengine` commands).
+
+## Running commands without installing
+
+You can also run commands without installing, using `uv`:
+
+```bash
+uv run cfengine format
+```
+
+## Running tests
+
+Use the makefile command to run all linting and tests:
+
+```bash
+make check
+```
+
+Running individual test suites:
+
+```bash
+uv run pytest
+bash tests/run-lint-tests.sh
+bash tests/run-format-tests.sh
+bash tests/run-shell-tests.sh
+```
+
 ## Releasing new versions
 
 Releases are [automated using a GH Action](https://github.com/cfengine/cfengine-cli/blob/main/.github/workflows/pypi-publish.yml)
@@ -79,62 +126,11 @@ Copy the token and paste it into the GitHub Secret named `PYPI_PASSWORD`.
 `PYPI_USERNAME` should be there already, you don't have to edit it, it is simply `__token__`.
 Don't store the token anywhere else - we generate new tokens if necessary.
 
-## Code formatting
-
-We use automated code formatters to ensure consistent code style / indentation.
-Please format Python code with [black](https://pypi.org/project/black/), and YAML and markdown files with [Prettier](https://prettier.io/).
-For simplicity's sake, we don't have a custom configuration, we use the tool's defaults.
-
-If your editor does not do this automatically, you can run these tools from the command line:
-
-```bash
-black . && prettier . --write
-```
-
-## Running commands during development
-
-This project uses `uv`.
-This makes it easy to run commands without installing the project, for example:
-
-```bash
-uv run cfengine format
-```
-
-## Installing from source:
-
-```bash
-git fetch --all --tags
-pip3 install .
-```
-
-## Running tests
-
-Unit tests:
-
-```bash
-py.test
-```
-
-Shell tests (requires installing first):
-
-```bash
-cat tests/shell/*.sh | bash
-```
-
 ## Not implemented yet / TODOs
 
 - `cfengine run`
   - The command could automatically detect that you have CFEngine installed on a remote hub, and run it there instead (using `cf-remote`).
   - Handle when `cf-agent` is not installed, help users install.
   - Prompt / help users do what they meant (i.e. build and deploy and run).
-- `cfengine format`
-  - Automatically break up and indent method calls, function calls, and nested function calls.
-  - Smarter placement of comments based on context.
-  - The command should be able to take a filename as an argument, and also operate using stdin and stdout.
-    (Receive file content on stdin, file type using command line arg, output formatted file to stdout).
-  - We can add a shortcut, `cfengine fmt`, since that matches other tools, like `deno`.
-- `cfengine lint`
-  - The command should be able to take a filename as an argument, and also take file content from stdin.
-  - It would be nice if we refactored `validate_config()` in `cfbs` so it would take a simple dictionary (JSON) instead of a special CFBSConfig object.
 - Missing commands:
   - `cfengine install` - Install CFEngine packages / binaries (Wrapping `cf-remote install`).
