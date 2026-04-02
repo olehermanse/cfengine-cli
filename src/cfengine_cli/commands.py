@@ -104,6 +104,8 @@ def lint(files, strict) -> int:
     errors = _lint(files, strict)
     if errors == 0:
         print("Success, no errors found.")
+    elif errors == 1:
+        print("Failure, 1 error in total.")
     else:
         print(f"Failure, {errors} errors in total.")
     return errors

@@ -16,7 +16,7 @@ import markdown_it
 from cfbs.pretty import pretty_file
 from cfbs.utils import find
 
-from cfengine_cli.lint import lint_args, lint_policy_file
+from cfengine_cli.lint import lint_args, lint_policy_file_snippet
 from cfengine_cli.utils import UserError
 
 IGNORED_DIRS = [".git"]
@@ -138,7 +138,7 @@ def fn_check_syntax(
 
     match language:
         case "cf":
-            r = lint_policy_file(
+            r = lint_policy_file_snippet(
                 snippet_abs_path, origin_path, first_line + 1, snippet_number, prefix
             )
             if r != 0:
