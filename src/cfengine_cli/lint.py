@@ -154,7 +154,7 @@ def _find_node_type(filename, lines, node, node_type):
     return matches
 
 
-def _node_checks(filename, lines, node, user_definition, strict, state: _State):
+def _node_checks(filename, lines, node, user_definitions, strict, state: _State):
     """Checks we run on each node in the syntax tree,
     utilizes state for checks which require context."""
     line = node.range.start_point[0] + 1
@@ -178,7 +178,7 @@ def _node_checks(filename, lines, node, user_definition, strict, state: _State):
             (
                 promise_type
                 not in BUILTIN_PROMISE_TYPES.union(
-                    user_definition.get("custom_promise_types", set())
+                    user_definitions.get("custom_promise_types", set())
                 )
             )
         ):
@@ -212,8 +212,9 @@ def _node_checks(filename, lines, node, user_definition, strict, state: _State):
         if (
             strict
             and state.qualify(_text(node), state.namespace)
-            in user_definition.get("all_bundle_names", set())
-            and state.promise_type in user_definition.get("custom_promise_types", set())
+            in user_definitions.get("all_bundle_names", set())
+            and state.promise_type
+            in user_definitions.get("custom_promise_types", set())
         ):
             _highlight_range(node, lines)
             print(
@@ -223,8 +224,8 @@ def _node_checks(filename, lines, node, user_definition, strict, state: _State):
         if strict and (
             state.qualify(_text(node), state.namespace)
             not in set.union(
-                user_definition.get("all_bundle_names", set()),
-                user_definition.get("all_body_names", set()),
+                user_definitions.get("all_bundle_names", set()),
+                user_definitions.get("all_body_names", set()),
             )
             and _text(node) not in BUILTIN_FUNCTIONS
         ):
@@ -237,22 +238,24 @@ def _node_checks(filename, lines, node, user_definition, strict, state: _State):
 
 
 def _stateful_walk(
-    filename, lines, node, user_definition, strict, state: _State | None = None
+    filename, lines, node, user_definitions, strict, state: _State | None = None
 ) -> int:
     if state is None:
         state = _State()
 
-    errors = _node_checks(filename, lines, node, user_definition, strict, state)
+    errors = _node_checks(filename, lines, node, user_definitions, strict, state)
 
     state.update(node)
     for child in node.children:
-        errors += _stateful_walk(filename, lines, child, user_definition, strict, state)
+        errors += _stateful_walk(
+            filename, lines, child, user_definitions, strict, state
+        )
     return errors
 
 
-def _walk(filename, lines, node, user_definition=None, strict=True) -> int:
-    if user_definition is None:
-        user_definition = {}
+def _walk(filename, lines, node, user_definitions=None, strict=True) -> int:
+    if user_definitions is None:
+        user_definitions = {}
 
     error_nodes = _find_node_type(filename, lines, node, "ERROR")
     if error_nodes:
@@ -267,12 +270,12 @@ def _walk(filename, lines, node, user_definition=None, strict=True) -> int:
     column = node.range.start_point[1] + 1
 
     state = _State()
-    ret = _stateful_walk(filename, lines, node, user_definition, strict, state=state)
+    ret = _stateful_walk(filename, lines, node, user_definitions, strict, state=state)
     state = _State()  # Clear state
     return ret
 
 
-def _parse_user_definition(filename, lines, root_node):
+def _parse_user_definitions(filename, lines, root_node):
     ns = "default"
     promise_blocks = set()
     bundle_blocks = set()
@@ -337,7 +340,7 @@ def lint_policy_file(
     original_line=None,
     snippet=None,
     prefix=None,
-    user_definition=None,
+    user_definitions=None,
     strict=True,
 ):
     assert original_filename is None or type(original_filename) is str
@@ -354,8 +357,8 @@ def lint_policy_file(
     assert os.path.isfile(filename)
     assert filename.endswith((".cf", ".cfengine3", ".cf3", ".cf.sub"))
 
-    if user_definition is None:
-        user_definition = {}
+    if user_definitions is None:
+        user_definitions = {}
 
     tree, lines, original_data = _parse_policy_file(filename)
     root_node = tree.root_node
@@ -387,7 +390,7 @@ def lint_policy_file(
         else:
             print(f"Error: Empty policy file '{filename}'")
         errors += 1
-    errors += _walk(filename, lines, root_node, user_definition, strict)
+    errors += _walk(filename, lines, root_node, user_definitions, strict)
     if prefix:
         print(prefix, end="")
     if errors == 0:
@@ -426,33 +429,33 @@ def lint_folder(folder, strict=True):
         else:
             errors += lint_single_file(filename)
 
-    user_definition = {}
+    user_definitions = {}
 
     # First pass: Gather custom types
     for filename in policy_files if strict else []:
         tree, lines, _ = _parse_policy_file(filename)
         if tree.root_node.type == "source_file":
-            for key, val in _parse_user_definition(
+            for key, val in _parse_user_definitions(
                 filename, lines, tree.root_node
             ).items():
-                user_definition[key] = user_definition.get(key, set()).union(val)
+                user_definitions[key] = user_definitions.get(key, set()).union(val)
 
     # Second pass: lint all policy files
     for filename in policy_files:
         errors += lint_policy_file(
-            filename, user_definition=user_definition, strict=strict
+            filename, user_definitions=user_definitions, strict=strict
         )
     return errors
 
 
-def lint_single_file(file, user_definition=None, strict=True):
+def lint_single_file(file, user_definitions=None, strict=True):
     assert os.path.isfile(file)
     if file.endswith("/cfbs.json"):
         return lint_cfbs_json(file)
     if file.endswith(".json"):
         return lint_json(file)
     assert file.endswith(".cf")
-    return lint_policy_file(file, user_definition=user_definition, strict=strict)
+    return lint_policy_file(file, user_definitions=user_definitions, strict=strict)
 
 
 def lint_single_arg(arg, strict=True):
