@@ -39,6 +39,12 @@ class _State:
     attribute_name: str | None = None  # "if" | "string" | "slist" | ... | None
     namespace: str = "default"  # "ns" | "default" | ... |
 
+    def end_of_file(self):
+        assert self.block_type is None
+        assert self.promise_type is None
+        assert self.attribute_name is None
+        self.namespace = "default"
+
     def update(self, node):
         """Updates and returns the state that should apply to the children of `node`."""
         if node.type == "}":
