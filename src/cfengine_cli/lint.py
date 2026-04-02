@@ -26,11 +26,13 @@ from cfengine_cli.policy_language import (
     BUILTIN_FUNCTIONS,
 )
 
+
 def _qualify(name: str, namespace: str) -> str:
     """If name is already qualified (contains ':'), return as-is. Otherwise prepend namespace."""
     if ":" in name:
         return name
     return f"{namespace}:{name}"
+
 
 @dataclass
 class _State:
@@ -463,9 +465,16 @@ def lint_single_file(file, user_definitions=None, strict=True):
     return lint_policy_file(file, user_definitions=user_definitions, strict=strict)
 
 
-def lint_single_arg(arg, strict=True):
+def _lint_single_arg(arg, strict=True):
     if os.path.isdir(arg):
         return lint_folder(arg, strict)
     assert os.path.isfile(arg)
 
     return lint_single_file(arg, strict=strict)
+
+
+def lint_args(args, strict):
+    errors = 0
+    for arg in args:
+        errors += _lint_single_arg(arg, strict)
+    return errors
