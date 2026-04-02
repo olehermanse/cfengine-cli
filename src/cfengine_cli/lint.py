@@ -26,6 +26,11 @@ from cfengine_cli.policy_language import (
     BUILTIN_FUNCTIONS,
 )
 
+def _qualify(name: str, namespace: str) -> str:
+    """If name is already qualified (contains ':'), return as-is. Otherwise prepend namespace."""
+    if ":" in name:
+        return name
+    return f"{namespace}:{name}"
 
 @dataclass
 class _State:
@@ -80,11 +85,6 @@ class _State:
                         self.namespace = _text(child.next_named_sibling).strip("\"'")
                     return
         return
-
-    @staticmethod
-    def qualify(name: str, namespace: str) -> str:
-        """If name is already qualified (contains ':'), return as-is. Otherwise prepend namespace."""
-        return name if ":" in name else f"{namespace}:{name}"
 
 
 def lint_cfbs_json(filename) -> int:
@@ -211,7 +211,7 @@ def _node_checks(filename, lines, node, user_definitions, strict, state: _State)
     if node.type == "calling_identifier":
         if (
             strict
-            and state.qualify(_text(node), state.namespace)
+            and _qualify(_text(node), state.namespace)
             in user_definitions.get("all_bundle_names", set())
             and state.promise_type
             in user_definitions.get("custom_promise_types", set())
@@ -222,7 +222,7 @@ def _node_checks(filename, lines, node, user_definitions, strict, state: _State)
             )
             return 1
         if strict and (
-            state.qualify(_text(node), state.namespace)
+            _qualify(_text(node), state.namespace)
             not in set.union(
                 user_definitions.get("all_bundle_names", set()),
                 user_definitions.get("all_body_names", set()),
@@ -297,14 +297,14 @@ def _parse_user_definitions(filename, lines, root_node):
             if ns_attr is not None:
                 ns = _text(ns_attr.next_named_sibling).strip("\"'")
             elif name_node is not None:
-                body_blocks.add(_State.qualify(_text(name_node), ns))
+                body_blocks.add(_qualify(_text(name_node), ns))
         elif child.type == "bundle_block":
             name_node = next(
                 (c for c in child.named_children if c.type == "bundle_block_name"),
                 None,
             )
             if name_node is not None:
-                bundle_blocks.add(_State.qualify(_text(name_node), ns))
+                bundle_blocks.add(_qualify(_text(name_node), ns))
         elif child.type == "promise_block":
             name_node = next(
                 (c for c in child.named_children if c.type == "promise_block_name"),
