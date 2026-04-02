@@ -1,0 +1,10 @@
+bundle agent main
+{
+  vars:
+    hpux::
+      "package_dir"
+        string => "$(sys.flavour)_$(sys.arch)";
+    !hpux::
+      "package_dir"
+        string => "$(sys.class)_$(sys.arch)";
+}
