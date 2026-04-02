@@ -436,13 +436,10 @@ def _discovery_file(filename):
     global state
     assert state
     tree, lines, _ = _parse_policy_file(filename)
-    if tree.root_node.type == "source_file":
-        for key, val in _parse_user_definitions(
-            filename, lines, tree.root_node
-        ).items():
-            state.user_definitions[key] = state.user_definitions.get(key, set()).union(
-                val
-            )
+    assert tree.root_node.type == "source_file"
+    for key, val in _parse_user_definitions(filename, lines, tree.root_node).items():
+        state.user_definitions[key] = state.user_definitions.get(key, set()).union(val)
+    state.end_of_file()
 
 
 def _discovery_folder(folder):
