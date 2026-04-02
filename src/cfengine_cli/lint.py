@@ -40,6 +40,7 @@ class _State:
     promise_type: str | None = None  # "vars" | "files" | "classes" | ... | None
     attribute_name: str | None = None  # "if" | "string" | "slist" | ... | None
     namespace: str = "default"  # "ns" | "default" | ... |
+    user_definitions = {}
 
     def end_of_file(self):
         assert self.block_type is None
@@ -95,33 +96,8 @@ class _State:
         return
 
 
-def lint_cfbs_json(filename) -> int:
-    assert os.path.isfile(filename)
-    assert filename.endswith("cfbs.json")
-
-    config = CFBSConfig.get_instance(filename=filename, non_interactive=True)
-    r = validate_config(config)
-
-    if r == 0:
-        print(f"PASS: {filename}")
-        return 0
-    print(f"FAIL: {filename}")
-    return r
-
-
-def lint_json(filename) -> int:
-    assert os.path.isfile(filename)
-
-    with open(filename, "r") as f:
-        data = f.read()
-
-    try:
-        data = json.loads(data)
-    except:
-        print(f"FAIL: {filename} (invalid JSON)")
-        return 1
-    print(f"PASS: {filename}")
-    return 0
+# TODO: Will remove this global in the future.
+state = None
 
 
 def _highlight_range(node, lines):
@@ -162,9 +138,11 @@ def _find_node_type(filename, lines, node, node_type):
     return matches
 
 
-def _node_checks(filename, lines, node, user_definitions, strict, state: _State):
+def _node_checks(filename, lines, node, strict):
     """Checks we run on each node in the syntax tree,
     utilizes state for checks which require context."""
+    global state
+    assert state
     line = node.range.start_point[0] + 1
     column = node.range.start_point[1] + 1
     if node.type == "attribute_name" and _text(node) == "ifvarclass":
@@ -182,11 +160,12 @@ def _node_checks(filename, lines, node, user_definitions, strict, state: _State)
                 f"Deprecation: Promise type '{promise_type}' is deprecated at {filename}:{line}:{column}"
             )
             return 1
+        assert state
         if strict and (
             (
                 promise_type
                 not in BUILTIN_PROMISE_TYPES.union(
-                    user_definitions.get("custom_promise_types", set())
+                    state.user_definitions.get("custom_promise_types", set())
                 )
             )
         ):
@@ -220,9 +199,9 @@ def _node_checks(filename, lines, node, user_definitions, strict, state: _State)
         if (
             strict
             and _qualify(_text(node), state.namespace)
-            in user_definitions.get("all_bundle_names", set())
+            in state.user_definitions.get("all_bundle_names", set())
             and state.promise_type
-            in user_definitions.get("custom_promise_types", set())
+            in state.user_definitions.get("custom_promise_types", set())
         ):
             _highlight_range(node, lines)
             print(
@@ -232,8 +211,8 @@ def _node_checks(filename, lines, node, user_definitions, strict, state: _State)
         if strict and (
             _qualify(_text(node), state.namespace)
             not in set.union(
-                user_definitions.get("all_bundle_names", set()),
-                user_definitions.get("all_body_names", set()),
+                state.user_definitions.get("all_bundle_names", set()),
+                state.user_definitions.get("all_body_names", set()),
             )
             and _text(node) not in BUILTIN_FUNCTIONS
         ):
@@ -245,19 +224,16 @@ def _node_checks(filename, lines, node, user_definitions, strict, state: _State)
     return 0
 
 
-def _stateful_walk(
-    filename, lines, node, user_definitions, strict, state: _State | None = None
-) -> int:
+def _stateful_walk(filename, lines, node, strict) -> int:
+    global state
     if state is None:
         state = _State()
 
-    errors = _node_checks(filename, lines, node, user_definitions, strict, state)
+    errors = _node_checks(filename, lines, node, strict)
 
     state.update(node)
     for child in node.children:
-        errors += _stateful_walk(
-            filename, lines, child, user_definitions, strict, state
-        )
+        errors += _stateful_walk(filename, lines, child, strict)
     return errors
 
 
@@ -277,9 +253,7 @@ def _walk(filename, lines, node, user_definitions=None, strict=True) -> int:
     line = node.range.start_point[0] + 1
     column = node.range.start_point[1] + 1
 
-    return _stateful_walk(
-        filename, lines, node, user_definitions, strict, state=_State()
-    )
+    return _stateful_walk(filename, lines, node, strict)
 
 
 def _parse_user_definitions(filename, lines, root_node):
@@ -341,15 +315,16 @@ def _parse_policy_file(filename):
     return tree, lines, original_data
 
 
-def lint_policy_file(
+def _lint_policy_file(
     filename,
     original_filename=None,
     original_line=None,
     snippet=None,
     prefix=None,
-    user_definitions=None,
     strict=True,
 ):
+    global state
+    assert state
     assert original_filename is None or type(original_filename) is str
     assert original_line is None or type(original_line) is int
     assert snippet is None or type(snippet) is int
@@ -363,9 +338,6 @@ def lint_policy_file(
         assert snippet and snippet > 0
     assert os.path.isfile(filename)
     assert filename.endswith((".cf", ".cfengine3", ".cf3", ".cf.sub"))
-
-    if user_definitions is None:
-        user_definitions = {}
 
     tree, lines, original_data = _parse_policy_file(filename)
     root_node = tree.root_node
@@ -397,7 +369,7 @@ def lint_policy_file(
         else:
             print(f"Error: Empty policy file '{filename}'")
         errors += 1
-    errors += _walk(filename, lines, root_node, user_definitions, strict)
+    errors += _walk(filename, lines, root_node, state, strict)
     if prefix:
         print(prefix, end="")
     if errors == 0:
@@ -418,7 +390,7 @@ def lint_policy_file(
     return errors
 
 
-def lint_folder(folder, strict=True):
+def _lint_folder(folder, strict=True):
     errors = 0
     policy_files = []
     while folder.endswith(("/.", "/")):
@@ -436,45 +408,131 @@ def lint_folder(folder, strict=True):
         else:
             errors += lint_single_file(filename)
 
-    user_definitions = {}
-
-    # First pass: Gather custom types
-    for filename in policy_files if strict else []:
-        tree, lines, _ = _parse_policy_file(filename)
-        if tree.root_node.type == "source_file":
-            for key, val in _parse_user_definitions(
-                filename, lines, tree.root_node
-            ).items():
-                user_definitions[key] = user_definitions.get(key, set()).union(val)
-
     # Second pass: lint all policy files
     for filename in policy_files:
-        errors += lint_policy_file(
-            filename, user_definitions=user_definitions, strict=strict
-        )
+        errors += _lint_policy_file(filename, strict=strict)
     return errors
 
 
-def lint_single_file(file, user_definitions=None, strict=True):
+def _lint_single_file(file, strict=True):
     assert os.path.isfile(file)
     if file.endswith("/cfbs.json"):
         return lint_cfbs_json(file)
     if file.endswith(".json"):
         return lint_json(file)
     assert file.endswith(".cf")
-    return lint_policy_file(file, user_definitions=user_definitions, strict=strict)
+    return lint_policy_file(file, strict=strict)
 
 
 def _lint_single_arg(arg, strict=True):
     if os.path.isdir(arg):
-        return lint_folder(arg, strict)
+        return _lint_folder(arg, strict)
     assert os.path.isfile(arg)
 
-    return lint_single_file(arg, strict=strict)
+    return _lint_single_file(arg, strict=strict)
+
+
+def _discovery_file(filename):
+    global state
+    assert state
+    tree, lines, _ = _parse_policy_file(filename)
+    if tree.root_node.type == "source_file":
+        for key, val in _parse_user_definitions(
+            filename, lines, tree.root_node
+        ).items():
+            state.user_definitions[key] = state.user_definitions.get(key, set()).union(
+                val
+            )
+
+
+def _discovery_folder(folder):
+    global state
+    assert state
+    assert os.path.isdir(folder)
+    for filename in os.listdir(folder):
+        _discovery_file(folder + "/" + filename)
+
+
+def _discovery_args(args):
+    global state
+    assert state
+    for arg in args:
+        if (
+            arg in ("/", ".", "./", "~", "~/")
+            or arg.endswith("/")
+            or os.path.isdir(arg)
+        ):
+            _discovery_folder(arg)
+        else:
+            _discovery_file(arg)
+
+
+# Interface: These are the functions we want to be called from outside
+# They create _State() and should not be called recursively inside lint.py
+
+
+def lint_single_file(file, strict=True):
+    global state
+    state = _State()
+    _discovery_file(file)
+    return _lint_single_file(file, strict)
 
 
 def lint_args(args, strict):
+    global state
+    state = _State()
+    _discovery_args(args)
     errors = 0
     for arg in args:
         errors += _lint_single_arg(arg, strict)
     return errors
+
+
+def lint_policy_file(
+    filename,
+    original_filename=None,
+    original_line=None,
+    snippet=None,
+    prefix=None,
+    strict=True,
+):
+    global state
+    state = _State()
+    _discovery_file(filename)
+    return _lint_policy_file(
+        filename=filename,
+        original_filename=original_filename,
+        original_line=original_line,
+        snippet=snippet,
+        prefix=prefix,
+        strict=strict,
+    )
+
+
+def lint_cfbs_json(filename) -> int:
+    assert os.path.isfile(filename)
+    assert filename.endswith("cfbs.json")
+
+    config = CFBSConfig.get_instance(filename=filename, non_interactive=True)
+    r = validate_config(config)
+
+    if r == 0:
+        print(f"PASS: {filename}")
+        return 0
+    print(f"FAIL: {filename}")
+    return r
+
+
+def lint_json(filename) -> int:
+    assert os.path.isfile(filename)
+
+    with open(filename, "r") as f:
+        data = f.read()
+
+    try:
+        data = json.loads(data)
+    except:
+        print(f"FAIL: {filename} (invalid JSON)")
+        return 1
+    print(f"PASS: {filename}")
+    return 0
