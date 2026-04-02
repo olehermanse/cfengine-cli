@@ -233,9 +233,7 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
                     else:
                         parts.append(text(p))
                 # Append directly to previous part (no space before parens)
-                header_parts[-1] = header_parts[-1] + stringify_parameter_list(
-                    parts
-                )
+                header_parts[-1] = header_parts[-1] + stringify_parameter_list(parts)
             else:
                 header_parts.append(text(x))
         line = " ".join(header_parts)
@@ -244,7 +242,15 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
             if not (prev_sib and prev_sib.type == "comment"):
                 fmt.print("", 0)
         fmt.print(line, 0)
-        for comment in header_comments:
+        for i, comment in enumerate(header_comments):
+            if comment.strip() == "#":
+                prev_is_comment = i > 0 and header_comments[i - 1].strip() != "#"
+                next_is_comment = (
+                    i + 1 < len(header_comments)
+                    and header_comments[i + 1].strip() != "#"
+                )
+                if not (prev_is_comment and next_is_comment):
+                    continue
             fmt.print(comment, 0)
         children = node.children[-1].children
     if node.type in [
@@ -263,11 +269,17 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
         return
     if node.type == "promise":
         # Single-line promise: if exactly 1 attribute, no half_promise continuation,
-        # and the whole line fits in line_length
+        # not inside a class guard, and the whole line fits in line_length
         attr_children = [c for c in children if c.type == "attribute"]
         next_sib = node.next_named_sibling
         has_continuation = next_sib and next_sib.type == "half_promise"
-        if len(attr_children) == 1 and not has_continuation:
+        parent = node.parent
+        in_class_guard = parent and parent.type in [
+            "class_guarded_promises",
+            "class_guarded_body_attributes",
+            "class_guarded_promise_block_attributes",
+        ]
+        if len(attr_children) == 1 and not has_continuation and not in_class_guard:
             promiser_node = next((c for c in children if c.type == "promiser"), None)
             if promiser_node:
                 line = (
@@ -281,8 +293,13 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
                     return
     if children:
         for child in children:
+            # Blank line between bundle sections
+            if child.type == "bundle_section":
+                prev = child.prev_named_sibling
+                if prev and prev.type == "bundle_section":
+                    fmt.print("", 0)
             # Blank line between promises in a section
-            if child.type == "promise":
+            elif child.type == "promise":
                 prev = child.prev_named_sibling
                 if prev and prev.type in ["promise", "half_promise"]:
                     fmt.print("", 0)
@@ -295,6 +312,7 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
                 if prev and prev.type in [
                     "promise",
                     "half_promise",
+                    "class_guarded_promises",
                 ]:
                     fmt.print("", 0)
             elif child.type == "comment":
@@ -312,6 +330,11 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
         fmt.print_same_line(node)
         return
     if node.type == "comment":
+        if text(node).strip() == "#":
+            prev = node.prev_named_sibling
+            nxt = node.next_named_sibling
+            if not (prev and prev.type == "comment" and nxt and nxt.type == "comment"):
+                return
         comment_indent = indent
         next_sib = node.next_named_sibling
         while next_sib and next_sib.type == "comment":
