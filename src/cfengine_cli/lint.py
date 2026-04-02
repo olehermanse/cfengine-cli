@@ -269,10 +269,9 @@ def _walk(filename, lines, node, user_definitions=None, strict=True) -> int:
     line = node.range.start_point[0] + 1
     column = node.range.start_point[1] + 1
 
-    state = _State()
-    ret = _stateful_walk(filename, lines, node, user_definitions, strict, state=state)
-    state = _State()  # Clear state
-    return ret
+    return _stateful_walk(
+        filename, lines, node, user_definitions, strict, state=_State()
+    )
 
 
 def _parse_user_definitions(filename, lines, root_node):
