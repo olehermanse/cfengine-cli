@@ -6,8 +6,19 @@ Currently implemented for:
 - cfbs.json (CFEngine Build project files)
 - *.json (basic JSON syntax checking)
 
+Linting is performed in 3 steps:
+1. Parsing - Read the .cf code and convert it into syntax trees
+2. Discovery - Walk the syntax trees and record what is defined
+3. Checking - Walk the syntax tree again and check for errors
+
+By default, linting is strict about bundles and bodies being
+defined somewhere in the supplied files / folders. This
+can be disabled using the `--strict=no` flag.
+
 Usage:
 $ cfengine lint
+$ cfengine lint ./core/ ./masterfiles/
+$ cfengine lint --strict=no main.cf
 """
 
 import os
@@ -35,7 +46,7 @@ def _qualify(name: str, namespace: str) -> str:
 
 
 @dataclass
-class _State:
+class State:
     block_type: str | None = None  # "bundle" | "body" | "promise" | None
     promise_type: str | None = None  # "vars" | "files" | "classes" | ... | None
     attribute_name: str | None = None  # "if" | "string" | "slist" | ... | None
@@ -48,9 +59,16 @@ class _State:
         assert self.attribute_name is None
         self.namespace = "default"
 
-    def update(self, node):
-        """Updates and returns the state that should apply to the children of `node`."""
+    def navigate(self, node):
+        """This function is called whenever we move to a node, to update the
+        state accordingly.
+
+        For example:
+        - When we encounter a closing } for a bundle, we want to set
+          block_type from "bundle" to None
+        """
         if node.type == "}":
+            assert self.attribute_name is None  # Should already be cleared by ;
             assert node.parent
             assert node.parent.type in [
                 "bundle_block_body",
@@ -58,11 +76,11 @@ class _State:
                 "body_block_body",
                 "list",
             ]
-            if node.parent.type != "list":
-                # We just ended a block
-                self.block_type = None
-                self.promise_type = None
-            self.attribute_name = None
+            if node.parent.type == "list":
+                return
+            # We just ended a block
+            self.block_type = None
+            self.promise_type = None
             return
         if node.type == ";":
             self.attribute_name = None
@@ -78,12 +96,8 @@ class _State:
             return
         if node.type == "bundle_section":
             # A bundle_section is always: promise_guard, [promises], [class_guarded_promises...]
-            # The promise_guard is guaranteed to exist by the grammar
             guard = next((c for c in node.children if c.type == "promise_guard"), None)
-            if guard is None:  # Should never happen
-                print("ERROR: Bundle section without a promise guard")
-                return
-
+            assert guard  # guaranteed to exist by the grammar
             self.promise_type = _text(guard)[:-1]  # strip trailing ':'
             return
         if node.type == "attribute":
@@ -141,7 +155,6 @@ def _find_node_type(filename, lines, node, node_type):
 def _node_checks(filename, lines, node, strict):
     """Checks we run on each node in the syntax tree,
     utilizes state for checks which require context."""
-    global state
     assert state
     line = node.range.start_point[0] + 1
     column = node.range.start_point[1] + 1
@@ -160,7 +173,6 @@ def _node_checks(filename, lines, node, strict):
                 f"Deprecation: Promise type '{promise_type}' is deprecated at {filename}:{line}:{column}"
             )
             return 1
-        assert state
         if strict and (
             (
                 promise_type
@@ -227,11 +239,11 @@ def _node_checks(filename, lines, node, strict):
 def _stateful_walk(filename, lines, node, strict) -> int:
     global state
     if state is None:
-        state = _State()
+        state = State()
 
     errors = _node_checks(filename, lines, node, strict)
 
-    state.update(node)
+    state.navigate(node)
     for child in node.children:
         errors += _stateful_walk(filename, lines, child, strict)
     return errors
@@ -323,7 +335,6 @@ def _lint_policy_file(
     prefix=None,
     strict=True,
 ):
-    global state
     assert state
     assert original_filename is None or type(original_filename) is str
     assert original_line is None or type(original_line) is int
@@ -433,7 +444,6 @@ def _lint_single_arg(arg, strict=True):
 
 
 def _discovery_file(filename):
-    global state
     assert state
     tree, lines, _ = _parse_policy_file(filename)
     assert tree.root_node.type == "source_file"
@@ -443,16 +453,12 @@ def _discovery_file(filename):
 
 
 def _discovery_folder(folder):
-    global state
-    assert state
     assert os.path.isdir(folder)
     for filename in os.listdir(folder):
         _discovery_file(folder + "/" + filename)
 
 
 def _discovery_args(args):
-    global state
-    assert state
     for arg in args:
         if (
             arg in ("/", ".", "./", "~", "~/")
@@ -465,19 +471,19 @@ def _discovery_args(args):
 
 
 # Interface: These are the functions we want to be called from outside
-# They create _State() and should not be called recursively inside lint.py
+# They create State() and should not be called recursively inside lint.py
 
 
 def lint_single_file(file, strict=True):
     global state
-    state = _State()
+    state = State()
     _discovery_file(file)
     return _lint_single_file(file, strict)
 
 
 def lint_args(args, strict):
     global state
-    state = _State()
+    state = State()
     _discovery_args(args)
     errors = 0
     for arg in args:
@@ -494,7 +500,7 @@ def lint_policy_file(
     strict=True,
 ):
     global state
-    state = _State()
+    state = State()
     _discovery_file(filename)
     return _lint_policy_file(
         filename=filename,
