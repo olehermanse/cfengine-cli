@@ -1,0 +1,30 @@
+bundle agent main
+{
+#
+# comment
+reports:
+"hello";
+}
+
+
+bundle agent b
+{
+# Some long comment here
+#
+# With more explanation here
+#
+reports:
+"hello";
+}
+
+
+
+bundle agent c
+# Some long comment here
+#
+# With more explanation here
+#
+{
+reports:
+"hello";
+}
