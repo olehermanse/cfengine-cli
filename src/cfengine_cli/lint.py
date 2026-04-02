@@ -21,6 +21,7 @@ $ cfengine lint ./core/ ./masterfiles/
 $ cfengine lint --strict=no main.cf
 """
 
+from enum import Enum
 import os
 import json
 import itertools
@@ -45,12 +46,19 @@ def _qualify(name: str, namespace: str) -> str:
     return f"{namespace}:{name}"
 
 
+class Mode(Enum):
+    NONE = None
+    DISCOVERY = 1
+    CHECKING = 2
+
+
 @dataclass
 class State:
     block_type: str | None = None  # "bundle" | "body" | "promise" | None
     promise_type: str | None = None  # "vars" | "files" | "classes" | ... | None
     attribute_name: str | None = None  # "if" | "string" | "slist" | ... | None
     namespace: str = "default"  # "ns" | "default" | ... |
+    mode: Mode = Mode.NONE
     user_definitions = {}
 
     def end_of_file(self):
@@ -237,10 +245,7 @@ def _node_checks(filename, lines, node, strict):
 
 
 def _stateful_walk(filename, lines, node, strict) -> int:
-    global state
-    if state is None:
-        state = State()
-
+    assert state
     errors = _node_checks(filename, lines, node, strict)
 
     state.navigate(node)
