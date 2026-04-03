@@ -4,7 +4,7 @@ import re
 import json
 from cfengine_cli.profile import profile_cfengine, generate_callstack
 from cfengine_cli.dev import dispatch_dev_subcommand
-from cfengine_cli.lint import lint_folder, lint_single_arg
+from cfengine_cli.lint import lint_args
 from cfengine_cli.shell import user_command
 from cfengine_cli.paths import bin
 from cfengine_cli.version import cfengine_cli_version_string
@@ -96,20 +96,16 @@ def format(names, line_length) -> int:
 
 def _lint(files, strict) -> int:
     if not files:
-        return lint_folder(".", strict)
-
-    errors = 0
-
-    for file in files:
-        errors += lint_single_arg(file, strict)
-
-    return errors
+        return lint_args(["."], strict)
+    return lint_args(files, strict)
 
 
 def lint(files, strict) -> int:
     errors = _lint(files, strict)
     if errors == 0:
         print("Success, no errors found.")
+    elif errors == 1:
+        print("Failure, 1 error in total.")
     else:
         print(f"Failure, {errors} errors in total.")
     return errors

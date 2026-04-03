@@ -16,7 +16,8 @@ import markdown_it
 from cfbs.pretty import pretty_file
 from cfbs.utils import find
 
-from cfengine_cli.lint import lint_folder, lint_policy_file
+from cfengine_cli.format import format_policy_file
+from cfengine_cli.lint import lint_args, lint_policy_file_snippet
 from cfengine_cli.utils import UserError
 
 IGNORED_DIRS = [".git"]
@@ -127,7 +128,7 @@ def fn_check_syntax(
     first_line,
     _last_line,
     snippet_number,
-    prefix=None,
+    prefix,
 ):
     snippet_abs_path = os.path.abspath(snippet_path)
 
@@ -138,8 +139,13 @@ def fn_check_syntax(
 
     match language:
         case "cf":
-            r = lint_policy_file(
-                snippet_abs_path, origin_path, first_line + 1, snippet_number, prefix
+            r = lint_policy_file_snippet(
+                snippet_abs_path,
+                origin_path,
+                first_line + 1,
+                snippet_number,
+                prefix,
+                strict=False,
             )
             if r != 0:
                 raise UserError(f"Error when checking '{origin_path}'")
@@ -189,6 +195,7 @@ def fn_replace(origin_path, snippet_path, _language, first_line, last_line, inde
 
 
 def fn_autoformat(_origin_path, snippet_path, language, _first_line, _last_line):
+    assert language in ("cf", "json")
     match language:
         case "json":
             try:
@@ -203,6 +210,9 @@ def fn_autoformat(_origin_path, snippet_path, language, _first_line, _last_line)
                 raise UserError(f"Couldn't open '{snippet_path}'")
             except json.decoder.JSONDecodeError:
                 raise UserError(f"Invalid json in '{snippet_path}'")
+        case "cf":
+            # Note: Dead code - Not used for CFEngine policy yet
+            format_policy_file(snippet_path, 80)
 
 
 def _translate_language(x):
@@ -241,10 +251,23 @@ def _process_markdown_code_blocks(
     origin_paths = sorted(parsed_markdowns["files"].keys())
     origin_paths_len = len(origin_paths)
 
+    if origin_paths_len == 0:
+        print("No markdown files found.")
+        return
+
+    if syntax_check:
+        # We currently only print the filenames during linting, not formatting
+        print(
+            f"Processing code blocks (snippets) inside {origin_paths_len} markdown files:"
+        )
     for origin_paths_i, origin_path in enumerate(origin_paths):
         percentage = int(100 * (origin_paths_i + 1) / origin_paths_len)
-        prefix = f"[{origin_paths_i + 1}/{origin_paths_len} ({percentage}%)] "
+        spaces = " " * (4 - len(str(percentage)))
+        prefix = f"[{origin_paths_i + 1}/{origin_paths_len}{spaces}({percentage}%)] "
         offset = 0
+        if syntax_check and not parsed_markdowns["files"][origin_path]["code-blocks"]:
+            print(f"{prefix}SKIP: No code blocks in '{origin_path}'")
+            continue
         for i, code_block in enumerate(
             parsed_markdowns["files"][origin_path]["code-blocks"]
         ):
@@ -259,33 +282,44 @@ def _process_markdown_code_blocks(
             snippet_path = f"{origin_path}.snippet-{snippet_number}.{language}"
 
             flags = code_block["flags"]
+            first_line = code_block["first_line"]
+            last_line = code_block["last_line"]
             if "noextract" in flags or "skip" in flags:
                 # code block was marked to be skipped
+                if syntax_check:
+                    print(
+                        f"{prefix}SKIP: Snippet {snippet_number} at '{origin_path}:{first_line}' ({language} {' '.join(flags)})"
+                    )
                 continue
             if extract:
                 fn_extract(
                     origin_path,
                     snippet_path,
                     language,
-                    code_block["first_line"],
-                    code_block["last_line"],
+                    first_line,
+                    last_line,
                 )
 
-            if syntax_check and "novalidate" not in flags:
-                try:
-                    fn_check_syntax(
-                        origin_path,
-                        snippet_path,
-                        language,
-                        code_block["first_line"],
-                        code_block["last_line"],
-                        snippet_number,
-                        prefix,
+            if syntax_check:
+                if "novalidate" in flags:
+                    print(
+                        f"{prefix}SKIP: Snippet {snippet_number} at '{origin_path}:{first_line}' ({language} {' '.join(flags)})"
                     )
-                except Exception as e:
-                    if cleanup:
-                        os.remove(snippet_path)
-                    raise e
+                else:
+                    try:
+                        fn_check_syntax(
+                            origin_path,
+                            snippet_path,
+                            language,
+                            first_line,
+                            last_line,
+                            snippet_number,
+                            prefix,
+                        )
+                    except Exception as e:
+                        if cleanup:
+                            os.remove(snippet_path)
+                        raise e
 
             if output_check and "noexecute" not in flags:
                 fn_check_output()
@@ -295,8 +329,8 @@ def _process_markdown_code_blocks(
                     origin_path,
                     snippet_path,
                     language,
-                    code_block["first_line"],
-                    code_block["last_line"],
+                    first_line,
+                    last_line,
                 )
 
             if replace and "noreplace" not in flags:
@@ -304,7 +338,7 @@ def _process_markdown_code_blocks(
                     origin_path,
                     snippet_path,
                     language,
-                    code_block["first_line"],
+                    first_line,
                     code_block["last_line"],
                     code_block["indent"],
                 )
@@ -409,7 +443,7 @@ def check_docs() -> int:
 
     Run by the command:
     cfengine dev lint-docs"""
-    r = lint_folder(".", strict=False)
+    r = lint_args(["."], strict=False)
     if r != 0:
         return r
     _process_markdown_code_blocks(
