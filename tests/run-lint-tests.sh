@@ -21,12 +21,12 @@ for file in tests/lint/*.cf; do
     #  - Fail (non-zero exit code)
     #  - Output the correct error message
 
-    expected="$(echo $file | sed 's/\.x\.cf$/.output.txt/')"
+    expected="$(echo $file | sed 's/\.x\.cf$/.expected.txt/')"
     if [ ! -f "$expected" ]; then
       echo "FAIL: Missing expected output file: $expected"
       exit 1
     fi
-    output="tmp/$(basename $file .x.cf).lint-output.txt"
+    output="tests/lint/$(basename $file .x.cf).output.txt"
     if cfengine lint "$file" > "$output" 2>&1; then
       echo "FAIL: $file - expected lint failure but got success"
       exit 1
