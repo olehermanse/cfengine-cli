@@ -1,0 +1,7 @@
+
+  vars:
+    "x" string => default:target("arg");
+                  ^------------^
+Error: Call to unknown function / bundle / body 'default:target' at at tests/lint/008_namespace.x.cf:15:19
+FAIL: tests/lint/008_namespace.x.cf (1 errors)
+Failure, 1 errors in total.
