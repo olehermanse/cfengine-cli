@@ -26,4 +26,7 @@ baz::
 if => "bar"
 # Comment at atttribute level
 string => "some_value";
+classes:
+# Comment before promise
+"a" if => "b";
 }

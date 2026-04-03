@@ -49,7 +49,18 @@ class Formatter:
         return tmp
 
 
-def stringify_children_from_strings(parts):
+def stringify_parameter_list(parts):
+    """Join pre-extracted string tokens into a formatted parameter list.
+
+    Used when formatting bundle/body headers. Comments are
+    stripped from the parameter_list node before this function is called,
+    so `parts` contains only the structural tokens: "(", identifiers, ","
+    separators, and ")".  The function removes any trailing comma before
+    ")", then joins the tokens with appropriate spacing (space after each
+    comma, no space after "(" or before ")").
+
+    Example: ["(", "a", ",", "b", ",", ")"] -> "(a, b)"
+    """
     # Remove trailing comma before closing paren
     cleaned = []
     for i, part in enumerate(parts):
@@ -68,26 +79,39 @@ def stringify_children_from_strings(parts):
     return result
 
 
-def stringify_children(children):
+def stringify_single_line_nodes(nodes):
+    """Join a list of tree-sitter nodes into a single-line string.
+
+    Operates on the direct child nodes of a CFEngine syntax construct
+    (e.g. a list, call, or attribute). Each child is recursively
+    flattened via stringify_single_line_node(). Spacing rules:
+      - A space is inserted after each "," separator.
+      - A space is inserted before and after "=>" (fat arrow).
+      - No extra space otherwise (e.g. no space after "(" or before ")").
+
+    Used by stringify_single_line_node() to recursively flatten any node with
+    children, and by maybe_split_generic_list() to attempt a single-line
+    rendering before falling back to multi-line splitting.
+    """
     result = ""
     previous = None
-    for child in children:
-        string = stringify_single_line(child)
+    for node in nodes:
+        string = stringify_single_line_node(node)
         if previous and previous.type == ",":
             result += " "
-        if previous and child.type == "=>":
+        if previous and node.type == "=>":
             result += " "
         if previous and previous.type == "=>":
             result += " "
         result += string
-        previous = child
+        previous = node
     return result
 
 
-def stringify_single_line(node):
+def stringify_single_line_node(node):
     if not node.children:
         return text(node)
-    return stringify_children(node.children)
+    return stringify_single_line_nodes(node.children)
 
 
 def split_generic_value(node, indent, line_length):
@@ -95,7 +119,7 @@ def split_generic_value(node, indent, line_length):
         return split_rval_call(node, indent, line_length)
     if node.type == "list":
         return split_rval_list(node, indent, line_length)
-    return [stringify_single_line(node)]
+    return [stringify_single_line_node(node)]
 
 
 def split_generic_list(middle, indent, line_length):
@@ -104,7 +128,7 @@ def split_generic_list(middle, indent, line_length):
         if elements and element.type == ",":
             elements[-1] = elements[-1] + ","
             continue
-        line = " " * indent + stringify_single_line(element)
+        line = " " * indent + stringify_single_line_node(element)
         if len(line) < line_length:
             elements.append(line)
         else:
@@ -115,7 +139,7 @@ def split_generic_list(middle, indent, line_length):
 
 
 def maybe_split_generic_list(nodes, indent, line_length):
-    string = " " * indent + stringify_children(nodes)
+    string = " " * indent + stringify_single_line_nodes(nodes)
     if len(string) < line_length:
         return [string]
     return split_generic_list(nodes, indent, line_length)
@@ -147,11 +171,11 @@ def split_rval(node, indent, line_length):
         return split_rval_list(node, indent, line_length)
     if node.type == "call":
         return split_rval_call(node, indent, line_length)
-    return [stringify_single_line(node)]
+    return [stringify_single_line_node(node)]
 
 
 def maybe_split_rval(node, indent, offset, line_length):
-    line = stringify_single_line(node)
+    line = stringify_single_line_node(node)
     if len(line) + offset < line_length:
         return [line]
     return split_rval(node, indent, line_length)
@@ -169,11 +193,11 @@ def attempt_split_attribute(node, indent, line_length):
         lines = maybe_split_rval(rval, indent, offset, line_length)
         lines[0] = prefix + lines[0]
         return lines
-    return [" " * indent + stringify_single_line(node)]
+    return [" " * indent + stringify_single_line_node(node)]
 
 
 def stringify(node, indent, line_length):
-    single_line = " " * indent + stringify_single_line(node)
+    single_line = " " * indent + stringify_single_line_node(node)
     # Reserve 1 char for trailing ; or , after attributes
     effective_length = line_length - 1 if node.type == "attribute" else line_length
     if len(single_line) < effective_length:
@@ -209,9 +233,7 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
                     else:
                         parts.append(text(p))
                 # Append directly to previous part (no space before parens)
-                header_parts[-1] = header_parts[-1] + stringify_children_from_strings(
-                    parts
-                )
+                header_parts[-1] = header_parts[-1] + stringify_parameter_list(parts)
             else:
                 header_parts.append(text(x))
         line = " ".join(header_parts)
@@ -220,7 +242,15 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
             if not (prev_sib and prev_sib.type == "comment"):
                 fmt.print("", 0)
         fmt.print(line, 0)
-        for comment in header_comments:
+        for i, comment in enumerate(header_comments):
+            if comment.strip() == "#":
+                prev_is_comment = i > 0 and header_comments[i - 1].strip() != "#"
+                next_is_comment = (
+                    i + 1 < len(header_comments)
+                    and header_comments[i + 1].strip() != "#"
+                )
+                if not (prev_is_comment and next_is_comment):
+                    continue
             fmt.print(comment, 0)
         children = node.children[-1].children
     if node.type in [
@@ -239,17 +269,23 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
         return
     if node.type == "promise":
         # Single-line promise: if exactly 1 attribute, no half_promise continuation,
-        # and the whole line fits in line_length
+        # not inside a class guard, and the whole line fits in line_length
         attr_children = [c for c in children if c.type == "attribute"]
         next_sib = node.next_named_sibling
         has_continuation = next_sib and next_sib.type == "half_promise"
-        if len(attr_children) == 1 and not has_continuation:
+        parent = node.parent
+        in_class_guard = parent and parent.type in [
+            "class_guarded_promises",
+            "class_guarded_body_attributes",
+            "class_guarded_promise_block_attributes",
+        ]
+        if len(attr_children) == 1 and not has_continuation and not in_class_guard:
             promiser_node = next((c for c in children if c.type == "promiser"), None)
             if promiser_node:
                 line = (
                     text(promiser_node)
                     + " "
-                    + stringify_single_line(attr_children[0])
+                    + stringify_single_line_node(attr_children[0])
                     + ";"
                 )
                 if indent + len(line) <= line_length:
@@ -257,8 +293,13 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
                     return
     if children:
         for child in children:
+            # Blank line between bundle sections
+            if child.type == "bundle_section":
+                prev = child.prev_named_sibling
+                if prev and prev.type == "bundle_section":
+                    fmt.print("", 0)
             # Blank line between promises in a section
-            if child.type == "promise":
+            elif child.type == "promise":
                 prev = child.prev_named_sibling
                 if prev and prev.type in ["promise", "half_promise"]:
                     fmt.print("", 0)
@@ -271,6 +312,7 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
                 if prev and prev.type in [
                     "promise",
                     "half_promise",
+                    "class_guarded_promises",
                 ]:
                     fmt.print("", 0)
             elif child.type == "comment":
@@ -288,6 +330,11 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
         fmt.print_same_line(node)
         return
     if node.type == "comment":
+        if text(node).strip() == "#":
+            prev = node.prev_named_sibling
+            nxt = node.next_named_sibling
+            if not (prev and prev.type == "comment" and nxt and nxt.type == "comment"):
+                return
         comment_indent = indent
         next_sib = node.next_named_sibling
         while next_sib and next_sib.type == "comment":
