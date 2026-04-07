@@ -11,6 +11,6 @@ bundle agent target(a)
 
 bundle agent helper
 {
-  vars:
-    "x" string => default:target("arg");
+  methods:
+    "x" usebundle => default:target("arg");
 }
