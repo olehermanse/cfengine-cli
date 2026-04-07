@@ -3,5 +3,5 @@
   defaults:
   ^-------^
 Deprecation: Promise type 'defaults' is deprecated at tests/lint/003_deprecated_promise_type.x.cf:3:3
-FAIL: tests/lint/003_deprecated_promise_type.x.cf (1 errors)
-Failure, 1 errors in total.
+FAIL: tests/lint/003_deprecated_promise_type.x.cf (1 error)
+Failure, 1 error in total.

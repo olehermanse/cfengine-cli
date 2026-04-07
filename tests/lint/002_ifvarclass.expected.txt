@@ -3,5 +3,5 @@
       ifvarclass => "cfengine";
       ^--------^
 Deprecation: Use 'if' instead of 'ifvarclass' at tests/lint/002_ifvarclass.x.cf:5:7
-FAIL: tests/lint/002_ifvarclass.x.cf (1 errors)
-Failure, 1 errors in total.
+FAIL: tests/lint/002_ifvarclass.x.cf (1 error)
+Failure, 1 error in total.

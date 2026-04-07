@@ -1,0 +1,16 @@
+body file control
+{
+  namespace => "mylib";
+}
+
+bundle agent target(a)
+{
+  reports:
+    "Hello, $(a)";
+}
+
+bundle agent helper
+{
+  vars:
+    "x" string => default:target("arg");
+}

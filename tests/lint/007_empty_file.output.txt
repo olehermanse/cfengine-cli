@@ -1,3 +1,0 @@
-Error: Empty policy file 'tests/lint/007_empty_file.x.cf'
-FAIL: tests/lint/007_empty_file.x.cf (1 errors)
-Failure, 1 errors in total.

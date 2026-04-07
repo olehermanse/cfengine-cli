@@ -2,5 +2,5 @@
 bundle agent MyBundle
              ^------^
 Convention: Bundle name should be lowercase at tests/lint/004_bundle_name_lowercase.x.cf:1:14
-FAIL: tests/lint/004_bundle_name_lowercase.x.cf (1 errors)
-Failure, 1 errors in total.
+FAIL: tests/lint/004_bundle_name_lowercase.x.cf (1 error)
+Failure, 1 error in total.
