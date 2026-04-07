@@ -1,0 +1,12 @@
+
+  vars:
+    "x" string => target("arg");
+                  ^----^
+Error: Call to unknown function 'target' inside 'vars'-promise at tests/lint/010_unknown_function_inside_vars.x.cf:16:19
+
+    "y"
+      classes => isvariable("arg"),
+                 ^--------^
+Error: 'isvariable' is not a defined body. Only bodies may be called with 'classes' at tests/lint/010_unknown_function_inside_vars.x.cf:18:18
+FAIL: tests/lint/010_unknown_function_inside_vars.x.cf (2 errors)
+Failure, 2 errors in total.

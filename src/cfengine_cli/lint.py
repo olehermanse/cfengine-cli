@@ -515,6 +515,26 @@ def _lint_node(node: Node, policy_file: PolicyFile, state: State) -> int:
                 f"Error: Call to unknown function / bundle / body '{name}' {location}"
             )
             return 1
+        if (
+            name not in BUILTIN_FUNCTIONS
+            and state.promise_type == "vars"
+            and state.attribute_name not in ("action", "classes")
+        ):
+            _highlight_range(node, lines)
+            print(
+                f"Error: Call to unknown function '{name}' inside 'vars'-promise {location}"
+            )
+            return 1
+        if (
+            state.promise_type == "vars"
+            and state.attribute_name in ("action", "classes")
+            and qualified_name not in state.bodies
+        ):
+            _highlight_range(node, lines)
+            print(
+                f"Error: '{name}' is not a defined body. Only bodies may be called with '{state.attribute_name}' {location}"
+            )
+            return 1
     return 0
 
 
