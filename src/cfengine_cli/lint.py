@@ -492,6 +492,15 @@ def _lint_node(node: Node, policy_file: PolicyFile, state: State) -> int:
             f"Error: Bundle type must be one of ({', '.join(ALLOWED_BUNDLE_TYPES)}), not '{_text(node)}' {location}"
         )
         return 1
+    if state.strict and (
+        node.type in ("bundle_block_name", "body_block_name")
+        and _text(node) in BUILTIN_FUNCTIONS
+    ):
+        _highlight_range(node, lines)
+        print(
+            f"Error: {"Bundle" if "bundle" in node.type else "Body"} '{_text(node)}' conflicts with built-in function with the same name {location}"
+        )
+        return 1
     if node.type == "calling_identifier":
         name = _text(node)
         qualified_name = _qualify(name, state.namespace)

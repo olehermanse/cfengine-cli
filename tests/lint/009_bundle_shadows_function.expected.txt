@@ -1,0 +1,6 @@
+
+bundle agent isvariable
+             ^--------^
+Error: Bundle 'isvariable' conflicts with built-in function with the same name at tests/lint/009_bundle_shadows_function.x.cf:1:14
+FAIL: tests/lint/009_bundle_shadows_function.x.cf (1 error)
+Failure, 1 error in total.
