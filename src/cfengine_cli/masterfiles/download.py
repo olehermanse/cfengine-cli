@@ -11,7 +11,7 @@ from cfbs.utils import (
 )
 
 ENTERPRISE_RELEASES_URL = "https://cfengine.com/release-data/enterprise/releases.json"
-
+COMMUNITY_RELEASES_URL = "https://cfengine.com/release-data/community/releases.json"
 
 COMMUNITY_ONLY_VERSIONS = ["3.12.0b1", "3.10.0b1"]
 """Masterfiles versions which do not appear in Enterprise releases but appear in Community releases."""
