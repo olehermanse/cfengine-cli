@@ -1,0 +1,26 @@
+bundle agent main
+{
+  packages:
+    "libyaml-dev"
+        package_policy => "delete";
+
+    "libxml2-dev"
+        package_policy => "delete";
+
+    "librsync-dev"
+        package_policy => "delete";
+
+    debian.!bootstrap_pr_host::
+      "libattr1-dev"
+        package_policy => "delete";
+
+      "libssl-dev"
+        package_policy => "delete";
+
+      "libpcre2-dev"
+        package_policy => "delete";
+
+      "libacl1-dev"
+        package_policy => "delete";
+
+}
