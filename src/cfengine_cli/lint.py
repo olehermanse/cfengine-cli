@@ -492,6 +492,15 @@ def _lint_node(node: Node, policy_file: PolicyFile, state: State) -> int:
             f"Error: Bundle type must be one of ({', '.join(ALLOWED_BUNDLE_TYPES)}), not '{_text(node)}' {location}"
         )
         return 1
+    if state.strict and (
+        node.type in ("bundle_block_name", "body_block_name")
+        and _text(node) in BUILTIN_FUNCTIONS
+    ):
+        _highlight_range(node, lines)
+        print(
+            f"Error: {"Bundle" if "bundle" in node.type else "Body"} '{_text(node)}' conflicts with built-in function with the same name {location}"
+        )
+        return 1
     if node.type == "calling_identifier":
         name = _text(node)
         qualified_name = _qualify(name, state.namespace)
@@ -513,6 +522,26 @@ def _lint_node(node: Node, policy_file: PolicyFile, state: State) -> int:
             _highlight_range(node, lines)
             print(
                 f"Error: Call to unknown function / bundle / body '{name}' {location}"
+            )
+            return 1
+        if (
+            name not in BUILTIN_FUNCTIONS
+            and state.promise_type == "vars"
+            and state.attribute_name not in ("action", "classes")
+        ):
+            _highlight_range(node, lines)
+            print(
+                f"Error: Call to unknown function '{name}' inside 'vars'-promise {location}"
+            )
+            return 1
+        if (
+            state.promise_type == "vars"
+            and state.attribute_name in ("action", "classes")
+            and qualified_name not in state.bodies
+        ):
+            _highlight_range(node, lines)
+            print(
+                f"Error: '{name}' is not a defined body. Only bodies may be called with '{state.attribute_name}' {location}"
             )
             return 1
     return 0

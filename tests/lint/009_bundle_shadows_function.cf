@@ -1,0 +1,5 @@
+bundle agent isvariab
+{
+  reports:
+    "isvariab is not a built-in function";
+}

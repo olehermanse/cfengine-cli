@@ -1,0 +1,5 @@
+bundle agent isvariable
+{
+  reports:
+    "isvariable is a built-in function";
+}

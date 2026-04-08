@@ -1,0 +1,22 @@
+body classes bundle_class(a)
+{
+  scope => "bundle";
+  promise_kept => { "$(a):bundle_context" };
+}
+
+bundle agent target(a)
+{
+  reports:
+    "Hello, $(a)";
+}
+
+bundle agent helper
+{
+  vars:
+    "x" string => isvariable("arg");
+    "y"
+      classes => bundle_class("arg"),
+      string => "";
+  methods:
+    "x" usebundle => target("arg");
+}
