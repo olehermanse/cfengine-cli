@@ -1,9 +1,11 @@
+import json
 from cfengine_cli.masterfiles.download import (
     ENTERPRISE_RELEASES_URL,
+    COMMUNITY_RELEASES_URL,
     download_all_versions,
 )
 from cfengine_cli.masterfiles.generate_vcf_download import generate_vcf_download
-from cfengine_cli.masterfiles.analyze import filter_unstable_releases, sort_release_data
+from cfengine_cli.masterfiles.analyze import get_stable_releases, sort_release_data
 from cfengine_cli.masterfiles.generate_vcf_git_checkout import generate_vcf_git_checkout
 from cfengine_cli.masterfiles.check_download_matches_git import (
     check_download_matches_git,
@@ -72,21 +74,7 @@ def generate_release_information_impl(
         )
 
 
-def generate_release_history():
-    print("Generating release history information...")
-
-    releases_data = download_releasedata()
-
-    stable_releases = filter_unstable_releases(releases_data)
-
-    file_checksums_dict = build_release_history(stable_releases)
-
-    sorted_releases = sort_release_data(file_checksums_dict)
-
-    write_json("./cfengine-enterprise/checksums.json", sorted_releases)
-
-
-def download_releasedata():
+def download_enterprise_releasedata():
     # Downloading releases.json:
     try:
         releases_data = get_json(ENTERPRISE_RELEASES_URL)
@@ -97,6 +85,42 @@ def download_releasedata():
         )
 
     return releases_data
+
+
+def download_community_releasedata():
+    # Downloading community/releases.json
+    try:
+        releases_data = get_json(COMMUNITY_RELEASES_URL)
+
+    except CFBSNetworkError:
+        raise CFBSExitError(
+            "Downloading CFEngine release data failed - check your Wi-Fi / network settings."
+        )
+
+    return releases_data
+
+
+def process_release_type(folder, download_func):
+    # Function for processing either community or enterprise releases
+    release_data = download_func()
+
+    write_json_pretty(f"./{folder}/releases.json", release_data)
+
+    stable_releases = get_stable_releases(release_data)
+
+    file_checksums_dict = build_release_history(stable_releases)
+
+    write_version_files(stable_releases, folder)
+
+    sorted_releases = sort_release_data(file_checksums_dict)
+
+    write_json(f"./{folder}/checksums.json", sorted_releases)
+
+
+def generate_release_history():
+    print("Generating release history information...")
+    process_release_type("cfengine-enterprise", download_enterprise_releasedata)
+    process_release_type("cfengine-community", download_community_releasedata)
 
 
 def build_release_history(filtered_releases):
@@ -152,3 +176,19 @@ def extract_file_info(asset_data):
         return filename, checksum
 
     return None, None
+
+
+def write_version_files(stable_releases, folder):
+    # Writes versionfiles for each version
+    for release_data in stable_releases:
+        version = release_data.get("version")
+        if not version:
+            continue
+        version_data, _ = download_release_version_data(release_data)
+        write_json(f"./{folder}/versions/{version}.json", version_data)
+
+
+def write_json_pretty(path, data):
+    # Writes release information in same format as on cfengine.com
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
