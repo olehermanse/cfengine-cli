@@ -207,6 +207,25 @@ def stringify(node, indent, line_length):
     return [single_line]
 
 
+def can_single_line_promise(node, indent, line_length):
+    """Check if a promise node can be formatted on a single line."""
+    if node.type != "promise":
+        return False
+    children = node.children
+    attr_children = [c for c in children if c.type == "attribute"]
+    next_sib = node.next_named_sibling
+    has_continuation = next_sib and next_sib.type == "half_promise"
+    if len(attr_children) != 1 or has_continuation:
+        return False
+    promiser_node = next((c for c in children if c.type == "promiser"), None)
+    if not promiser_node:
+        return False
+    line = (
+        text(promiser_node) + " " + stringify_single_line_node(attr_children[0]) + ";"
+    )
+    return indent + len(line) <= line_length
+
+
 def autoformat(node, fmt, line_length, macro_indent, indent=0):
     previous = fmt.update_previous(node)
     if previous and previous.type == "macro" and text(previous).startswith("@else"):
@@ -273,13 +292,7 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
         attr_children = [c for c in children if c.type == "attribute"]
         next_sib = node.next_named_sibling
         has_continuation = next_sib and next_sib.type == "half_promise"
-        parent = node.parent
-        in_class_guard = parent and parent.type in [
-            "class_guarded_promises",
-            "class_guarded_body_attributes",
-            "class_guarded_promise_block_attributes",
-        ]
-        if len(attr_children) == 1 and not has_continuation and not in_class_guard:
+        if len(attr_children) == 1 and not has_continuation:
             promiser_node = next((c for c in children if c.type == "promiser"), None)
             if promiser_node:
                 line = (
@@ -302,7 +315,15 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
             elif child.type == "promise":
                 prev = child.prev_named_sibling
                 if prev and prev.type in ["promise", "half_promise"]:
-                    fmt.print("", 0)
+                    # Skip blank line between consecutive single-line promises
+                    promise_indent = indent + 2
+                    both_single = (
+                        prev.type == "promise"
+                        and can_single_line_promise(prev, promise_indent, line_length)
+                        and can_single_line_promise(child, promise_indent, line_length)
+                    )
+                    if not both_single:
+                        fmt.print("", 0)
             elif child.type in [
                 "class_guarded_promises",
                 "class_guarded_body_attributes",
