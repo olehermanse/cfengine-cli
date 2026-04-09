@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import IO
+
 import tree_sitter_cfengine as tscfengine
 from tree_sitter import Language, Parser, Node
 from cfbs.pretty import pretty_file, pretty_check_file
@@ -24,7 +28,8 @@ BLOCK_TYPES = {"bundle_block", "promise_block", "body_block"}
 PROMISER_PARTS = {"promiser", "->", "stakeholder"}
 
 
-def format_json_file(filename, check):
+def format_json_file(filename: str, check: bool) -> None:
+    """Reformat a JSON file in place using cfbs pretty-printer."""
     assert filename.endswith(".json")
 
     if check:
@@ -39,42 +44,51 @@ def format_json_file(filename, check):
     return r
 
 
-def text(node: Node):
+def text(node: Node) -> str:
+    """Extract the UTF-8 text content of a tree-sitter node."""
     if not node.text:
         return ""
     return node.text.decode("utf-8")
 
 
 class Formatter:
-    def __init__(self):
-        self.empty = True
-        self.previous = None
-        self.buffer = ""
+    """Accumulates formatted output line-by-line into a string buffer."""
 
-    def _write(self, message, end="\n"):
+    def __init__(self) -> None:
+        self.empty: bool = True
+        self.previous: Node | None = None
+        self.buffer: str = ""
+
+    def _write(self, message: str, end: str = "\n") -> None:
+        """Append text to the buffer with the given line ending."""
         self.buffer += message + end
 
-    def print_lines(self, lines, indent):
+    def print_lines(self, lines: list[str], indent: int) -> None:
+        """Print multiple pre-formatted lines."""
         for line in lines:
             self.print(line, indent)
 
-    def print(self, string, indent):
-        if type(string) is not str:
+    def print(self, string: str | Node, indent: int) -> None:
+        """Print a string or node on a new line with the given indentation."""
+        if not isinstance(string, str):
             string = text(string)
         if not self.empty:
             self._write("\n", end="")
         self._write(" " * indent + string, end="")
         self.empty = False
 
-    def print_same_line(self, string):
-        if type(string) is not str:
+    def print_same_line(self, string: str | Node) -> None:
+        """Append text to the current line without a preceding newline."""
+        if not isinstance(string, str):
             string = text(string)
         self._write(string, end="")
 
-    def blank_line(self):
+    def blank_line(self) -> None:
+        """Insert a blank separator line."""
         self.print("", 0)
 
-    def update_previous(self, node):
+    def update_previous(self, node: Node) -> Node | None:
+        """Set the previously-visited node, returning the old value."""
         tmp = self.previous
         self.previous = node
         return tmp
@@ -85,16 +99,10 @@ class Formatter:
 # ---------------------------------------------------------------------------
 
 
-def stringify_parameter_list(parts):
-    """Join pre-extracted string tokens into a formatted parameter list.
+def stringify_parameter_list(parts: list[str]) -> str:
+    """Join string tokens into a formatted parameter list.
 
-    Used when formatting bundle/body headers. Comments are
-    stripped from the parameter_list node before this function is called,
-    so `parts` contains only the structural tokens: "(", identifiers, ","
-    separators, and ")".  The function removes any trailing comma before
-    ")", then joins the tokens with appropriate spacing (space after each
-    comma, no space after "(" or before ")").
-
+    Removes trailing commas and adds spacing after commas.
     Example: ["(", "a", ",", "b", ",", ")"] -> "(a, b)"
     """
     # Remove trailing comma before closing paren
@@ -115,14 +123,10 @@ def stringify_parameter_list(parts):
     return result
 
 
-def stringify_single_line_nodes(nodes):
-    """Join a list of tree-sitter nodes into a single-line string.
+def stringify_single_line_nodes(nodes: list[Node]) -> str:
+    """Join tree-sitter nodes into a single-line string with CFEngine spacing.
 
-    Spacing rules:
-      - A space is inserted after each "," separator.
-      - A space is inserted before and after "=>" (fat arrow).
-      - A space is inserted after "{" and before "}".
-      - No extra space otherwise (e.g. no space after "(" or before ")").
+    Inserts spaces after ",", around "=>", and inside "{ }".
     """
     result = ""
     previous = None
@@ -143,7 +147,8 @@ def stringify_single_line_nodes(nodes):
     return result
 
 
-def stringify_single_line_node(node):
+def stringify_single_line_node(node: Node) -> str:
+    """Recursively flatten a node and its children into a single-line string."""
     if not node.children:
         return text(node)
     return stringify_single_line_nodes(node.children)
@@ -154,7 +159,8 @@ def stringify_single_line_node(node):
 # ---------------------------------------------------------------------------
 
 
-def split_generic_value(node, indent, line_length):
+def split_generic_value(node: Node, indent: int, line_length: int) -> list[str]:
+    """Split a value node (call, list, or other) into multi-line strings."""
     if node.type == "call":
         return split_rval_call(node, indent, line_length)
     if node.type == "list":
@@ -162,8 +168,9 @@ def split_generic_value(node, indent, line_length):
     return [stringify_single_line_node(node)]
 
 
-def split_generic_list(middle, indent, line_length):
-    elements = []
+def split_generic_list(middle: list[Node], indent: int, line_length: int) -> list[str]:
+    """Split list elements into one-per-line strings, each pre-indented."""
+    elements: list[str] = []
     for element in middle:
         if elements and element.type == ",":
             elements[-1] = elements[-1] + ","
@@ -178,14 +185,18 @@ def split_generic_list(middle, indent, line_length):
     return elements
 
 
-def maybe_split_generic_list(nodes, indent, line_length):
+def maybe_split_generic_list(
+    nodes: list[Node], indent: int, line_length: int
+) -> list[str]:
+    """Try a single-line rendering; fall back to split_generic_list if too long."""
     string = " " * indent + stringify_single_line_nodes(nodes)
     if len(string) < line_length:
         return [string]
     return split_generic_list(nodes, indent, line_length)
 
 
-def split_rval_list(node, indent, line_length):
+def split_rval_list(node: Node, indent: int, line_length: int) -> list[str]:
+    """Split a list rval ({ ... }) into multi-line form."""
     assert node.type == "list"
     assert node.children[0].type == "{"
     first = text(node.children[0])
@@ -195,7 +206,8 @@ def split_rval_list(node, indent, line_length):
     return [first, *elements, last]
 
 
-def split_rval_call(node, indent, line_length):
+def split_rval_call(node: Node, indent: int, line_length: int) -> list[str]:
+    """Split a function call rval (func(...)) into multi-line form."""
     assert node.type == "call"
     assert node.children[0].type == "calling_identifier"
     assert node.children[1].type == "("
@@ -206,7 +218,8 @@ def split_rval_call(node, indent, line_length):
     return [first, *elements, last]
 
 
-def split_rval(node, indent, line_length):
+def split_rval(node: Node, indent: int, line_length: int) -> list[str]:
+    """Split an rval node into multi-line form based on its type."""
     if node.type == "list":
         return split_rval_list(node, indent, line_length)
     if node.type == "call":
@@ -214,7 +227,10 @@ def split_rval(node, indent, line_length):
     return [stringify_single_line_node(node)]
 
 
-def maybe_split_rval(node, indent, offset, line_length):
+def maybe_split_rval(
+    node: Node, indent: int, offset: int, line_length: int
+) -> list[str]:
+    """Return single-line rval if it fits at offset, otherwise split it."""
     line = stringify_single_line_node(node)
     if len(line) + offset < line_length:
         return [line]
@@ -226,7 +242,8 @@ def maybe_split_rval(node, indent, offset, line_length):
 # ---------------------------------------------------------------------------
 
 
-def attempt_split_attribute(node, indent, line_length):
+def attempt_split_attribute(node: Node, indent: int, line_length: int) -> list[str]:
+    """Split an attribute node, wrapping the rval if it's a list or call."""
     assert len(node.children) == 3
     lval = node.children[0]
     arrow = node.children[1]
@@ -241,7 +258,8 @@ def attempt_split_attribute(node, indent, line_length):
     return [" " * indent + stringify_single_line_node(node)]
 
 
-def stringify(node, indent, line_length):
+def stringify(node: Node, indent: int, line_length: int) -> list[str]:
+    """Return a node as pre-indented line(s), splitting if it exceeds line_length."""
     single_line = " " * indent + stringify_single_line_node(node)
     # Reserve 1 char for trailing ; or , after attributes
     effective_length = line_length - 1 if node.type == "attribute" else line_length
@@ -257,23 +275,24 @@ def stringify(node, indent, line_length):
 # ---------------------------------------------------------------------------
 
 
-def _get_stakeholder_list(children):
-    """Return the list node inside a stakeholder, or None."""
+def _get_stakeholder_list(children: list[Node]) -> Node | None:
+    """Return the list node inside a promise's stakeholder, or None."""
     stakeholder = next((c for c in children if c.type == "stakeholder"), None)
     if not stakeholder:
         return None
     return next((c for c in stakeholder.children if c.type == "list"), None)
 
 
-def _stakeholder_has_comments(children):
+def _stakeholder_has_comments(children: list[Node]) -> bool:
+    """Check if the stakeholder list contains any comment nodes."""
     list_node = _get_stakeholder_list(children)
     if not list_node:
         return False
     return any(c.type == "comment" for c in list_node.children)
 
 
-def _has_trailing_comma(middle):
-    """Check if list middle nodes end with a trailing comma."""
+def _has_trailing_comma(middle: list[Node]) -> bool:
+    """Check if a list's middle nodes end with a trailing comma."""
     for node in reversed(middle):
         if node.type == ",":
             return True
@@ -282,16 +301,16 @@ def _has_trailing_comma(middle):
     return False
 
 
-def _promiser_text(children):
-    """Return the raw promiser string, or None."""
+def _promiser_text(children: list[Node]) -> str | None:
+    """Return the raw promiser string from promise children, or None."""
     promiser_node = next((c for c in children if c.type == "promiser"), None)
     if not promiser_node:
         return None
     return text(promiser_node)
 
 
-def _promiser_line_with_stakeholder(children):
-    """Build 'promiser -> { stakeholder }' as a single-line string, or None."""
+def _promiser_line_with_stakeholder(children: list[Node]) -> str | None:
+    """Build the full promiser line including '-> { stakeholder }', or None."""
     prefix = _promiser_text(children)
     if not prefix:
         return None
@@ -302,8 +321,10 @@ def _promiser_line_with_stakeholder(children):
     return prefix
 
 
-def _stakeholder_needs_splitting(children, indent, line_length):
-    """Check if the stakeholder list needs to be split across multiple lines."""
+def _stakeholder_needs_splitting(
+    children: list[Node], indent: int, line_length: int
+) -> bool:
+    """Check if the stakeholder list must be split (comments or too long)."""
     if _stakeholder_has_comments(children):
         return True
     line = _promiser_line_with_stakeholder(children)
@@ -312,14 +333,20 @@ def _stakeholder_needs_splitting(children, indent, line_length):
     return indent + len(line) > line_length
 
 
-def _format_stakeholder_elements(middle, indent, line_length):
-    """Format the middle elements (between { and }) of a stakeholder list."""
+def _format_stakeholder_elements(
+    middle: list[Node], indent: int, line_length: int
+) -> list[str]:
+    """Format the elements between { and } of a stakeholder list.
+
+    Uses trailing-comma heuristic: lists with a trailing comma are always
+    split one-per-line; without, they may stay on a single line.
+    """
     if not any(n.type == "comment" for n in middle):
         if _has_trailing_comma(middle):
             return split_generic_list(middle, indent, line_length)
         return maybe_split_generic_list(middle, indent, line_length)
     # Comments present — format element-by-element to preserve them
-    elements = []
+    elements: list[str] = []
     for node in middle:
         if node.type == ",":
             if elements:
@@ -343,12 +370,17 @@ def _format_stakeholder_elements(middle, indent, line_length):
 # ---------------------------------------------------------------------------
 
 
-def _has_stakeholder(children):
+def _has_stakeholder(children: list[Node]) -> bool:
+    """Check if promise children include a stakeholder node."""
     return any(c.type == "stakeholder" for c in children)
 
 
-def can_single_line_promise(node, indent, line_length):
-    """Check if a promise node can be formatted on a single line."""
+def can_single_line_promise(node: Node, indent: int, line_length: int) -> bool:
+    """Check if a promise can be formatted entirely on one line.
+
+    Returns False for multi-attribute promises, promises with a
+    half_promise continuation, or stakeholder+attribute combinations.
+    """
     if node.type != "promise":
         return False
     children = node.children
@@ -372,7 +404,14 @@ def can_single_line_promise(node, indent, line_length):
     return indent + len(line) <= line_length
 
 
-def _format_promise(node, children, fmt, indent, line_length, macro_indent):
+def _format_promise(
+    node: Node,
+    children: list[Node],
+    fmt: Formatter,
+    indent: int,
+    line_length: int,
+    macro_indent: int,
+) -> bool:
     """Format a promise node. Returns True if handled, False to fall through."""
     # Single-line promise
     if can_single_line_promise(node, indent, line_length):
@@ -421,8 +460,14 @@ def _format_promise(node, children, fmt, indent, line_length, macro_indent):
     return False
 
 
-def _format_remaining_children(children, fmt, indent, line_length, macro_indent):
-    """Format promise children, skipping promiser/stakeholder parts."""
+def _format_remaining_children(
+    children: list[Node],
+    fmt: Formatter,
+    indent: int,
+    line_length: int,
+    macro_indent: int,
+) -> None:
+    """Format promise children, skipping promiser/arrow/stakeholder parts."""
     for child in children:
         if child.type in PROMISER_PARTS:
             continue
@@ -434,15 +479,15 @@ def _format_remaining_children(children, fmt, indent, line_length, macro_indent)
 # ---------------------------------------------------------------------------
 
 
-def _format_block_header(node, fmt):
-    """Format block header and return the body's children list."""
-    header_parts = []
-    header_comments = []
+def _format_block_header(node: Node, fmt: Formatter) -> list[Node]:
+    """Format a block header line and return the body's children for further processing."""
+    header_parts: list[str] = []
+    header_comments: list[str] = []
     for x in node.children[0:-1]:
         if x.type == "comment":
             header_comments.append(text(x))
         elif x.type == "parameter_list":
-            parts = []
+            parts: list[str] = []
             for p in x.children:
                 if p.type == "comment":
                     header_comments.append(text(p))
@@ -474,8 +519,8 @@ def _format_block_header(node, fmt):
 # ---------------------------------------------------------------------------
 
 
-def _needs_blank_line_before(child, indent, line_length):
-    """Determine if a blank line should be inserted before this child."""
+def _needs_blank_line_before(child: Node, indent: int, line_length: int) -> bool:
+    """Check if a blank separator line should precede this child node."""
     prev = child.prev_named_sibling
     if not prev:
         return False
@@ -511,8 +556,8 @@ def _needs_blank_line_before(child, indent, line_length):
 # ---------------------------------------------------------------------------
 
 
-def _is_empty_comment(node):
-    """Check if a bare '#' comment should be dropped."""
+def _is_empty_comment(node: Node) -> bool:
+    """Check if a bare '#' comment should be dropped (not between other comments)."""
     if text(node).strip() != "#":
         return False
     prev = node.prev_named_sibling
@@ -520,8 +565,8 @@ def _is_empty_comment(node):
     return not (prev and prev.type == "comment" and nxt and nxt.type == "comment")
 
 
-def _skip_comments(sibling, direction="next"):
-    """Walk past adjacent comments to find the nearest non-comment sibling."""
+def _skip_comments(sibling: Node | None, direction: str = "next") -> Node | None:
+    """Walk past adjacent comment siblings to find the nearest non-comment."""
     while sibling and sibling.type == "comment":
         sibling = (
             sibling.next_named_sibling
@@ -531,8 +576,8 @@ def _skip_comments(sibling, direction="next"):
     return sibling
 
 
-def _comment_indent(node, indent):
-    """Determine the indentation level for a leaf comment node."""
+def _comment_indent(node: Node, indent: int) -> int:
+    """Compute indentation for a leaf comment based on its nearest non-comment neighbor."""
     nearest = _skip_comments(node.next_named_sibling, "next")
     if nearest is None:
         nearest = _skip_comments(node.prev_named_sibling, "prev")
@@ -546,7 +591,14 @@ def _comment_indent(node, indent):
 # ---------------------------------------------------------------------------
 
 
-def autoformat(node, fmt, line_length, macro_indent, indent=0):
+def autoformat(
+    node: Node,
+    fmt: Formatter,
+    line_length: int,
+    macro_indent: int,
+    indent: int = 0,
+) -> None:
+    """Recursively format a tree-sitter node tree into the Formatter buffer."""
     previous = fmt.update_previous(node)
 
     # Macro handling
@@ -602,7 +654,8 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
 # ---------------------------------------------------------------------------
 
 
-def format_policy_file(filename, line_length, check):
+def format_policy_file(filename: str, line_length: int, check: bool) -> None:
+    """Format a .cf policy file in place, writing only if content changed."""
     assert filename.endswith(".cf")
 
     PY_LANGUAGE = Language(tscfengine.language())
@@ -630,7 +683,10 @@ def format_policy_file(filename, line_length, check):
     return 0
 
 
-def format_policy_fin_fout(fin, fout, line_length, check):
+def format_policy_fin_fout(
+    fin: IO[str], fout: IO[str], line_length: int, check: bool
+) -> None:
+    """Format CFEngine policy read from fin, writing the result to fout."""
     PY_LANGUAGE = Language(tscfengine.language())
     parser = Parser(PY_LANGUAGE)
 
