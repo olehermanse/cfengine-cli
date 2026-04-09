@@ -29,6 +29,10 @@ def generate_release_information_impl(
     omit_download=False, check=False, min_version=None
 ):
     if not omit_download:
+        generate_release_history()
+
+        generate_git_tags_map()
+
         print("Downloading masterfiles...")
 
         downloaded_versions = download_all_versions(DOWNLOAD_PATH, min_version)
@@ -48,10 +52,6 @@ def generate_release_information_impl(
         "Downloading releases of masterfiles from cfengine.com and generating release information..."
     )
     generate_vcf_download(DOWNLOAD_PATH, downloaded_versions)
-
-    generate_release_history()
-
-    generate_git_tags_map()
 
     if check:
         print(
