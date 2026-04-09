@@ -2,9 +2,9 @@
 # too deep into edge cases and wrappting etc.
 body common control
 {
-  inputs => {"/var/cfengine/inputs/some_file.cf"};
+  inputs => { "/var/cfengine/inputs/some_file.cf" };
   linux::
-    inputs => {"/var/cfengine/inputs/other_file.cf"};
+    inputs => { "/var/cfengine/inputs/other_file.cf" };
 }
 
 promise agent example
