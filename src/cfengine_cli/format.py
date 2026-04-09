@@ -103,6 +103,10 @@ def stringify_single_line_nodes(nodes):
             result += " "
         if previous and previous.type == "=>":
             result += " "
+        if previous and previous.type == "{":
+            result += " "
+        if previous and node.type == "}":
+            result += " "
         result += string
         previous = node
     return result
@@ -207,6 +211,110 @@ def stringify(node, indent, line_length):
     return [single_line]
 
 
+def has_stakeholder(children):
+    return any(c.type == "stakeholder" for c in children)
+
+
+def stakeholder_has_comments(children):
+    stakeholder = next((c for c in children if c.type == "stakeholder"), None)
+    if not stakeholder:
+        return False
+    for child in stakeholder.children:
+        if child.type == "list":
+            return any(c.type == "comment" for c in child.children)
+    return False
+
+
+def promiser_prefix(children):
+    """Build the promiser text (without stakeholder)."""
+    promiser_node = next((c for c in children if c.type == "promiser"), None)
+    if not promiser_node:
+        return None
+    return text(promiser_node)
+
+
+def promiser_line(children):
+    """Build the promiser prefix: promiser + optional '-> stakeholder'."""
+    prefix = promiser_prefix(children)
+    if not prefix:
+        return None
+    arrow = next((c for c in children if c.type == "->"), None)
+    stakeholder = next((c for c in children if c.type == "stakeholder"), None)
+    if arrow and stakeholder:
+        prefix += " " + text(arrow) + " " + stringify_single_line_node(stakeholder)
+    return prefix
+
+
+def stakeholder_needs_splitting(children, indent, line_length):
+    """Check if the stakeholder list needs to be split across multiple lines."""
+    if stakeholder_has_comments(children):
+        return True
+    prefix = promiser_line(children)
+    if not prefix:
+        return False
+    return indent + len(prefix) > line_length
+
+
+def split_stakeholder(children, indent, has_attributes, line_length):
+    """Split a stakeholder list across multiple lines.
+
+    Returns (opening_line, element_lines, closing_str) where:
+    - opening_line: 'promiser -> {' to print at promise indent
+    - element_lines: pre-indented element strings
+    - closing_str: '}' or '};' pre-indented at the appropriate level
+    """
+    prefix = promiser_prefix(children)
+    assert prefix is not None
+    opening = prefix + " -> {"
+    stakeholder = next(c for c in children if c.type == "stakeholder")
+    list_node = next(c for c in stakeholder.children if c.type == "list")
+    middle = list_node.children[1:-1]  # between { and }
+    element_indent = indent + 4
+    has_comments = stakeholder_has_comments(children)
+    if has_attributes or has_comments:
+        close_indent = indent + 2
+    else:
+        close_indent = indent
+    elements = format_stakeholder_elements(middle, element_indent, line_length)
+    return opening, elements, close_indent
+
+
+def has_trailing_comma(middle):
+    """Check if a list's middle nodes end with a trailing comma."""
+    for node in reversed(middle):
+        if node.type == ",":
+            return True
+        if node.type != "comment":
+            return False
+    return False
+
+
+def format_stakeholder_elements(middle, indent, line_length):
+    """Format the middle elements of a stakeholder list."""
+    has_comments = any(n.type == "comment" for n in middle)
+    if not has_comments:
+        if has_trailing_comma(middle):
+            return split_generic_list(middle, indent, line_length)
+        return maybe_split_generic_list(middle, indent, line_length)
+    elements = []
+    for node in middle:
+        if node.type == ",":
+            if elements:
+                elements[-1] = elements[-1] + ","
+            continue
+        if node.type == "comment":
+            elements.append(" " * indent + text(node))
+        else:
+            line = " " * indent + stringify_single_line_node(node)
+            if len(line) < line_length:
+                elements.append(line)
+            else:
+                lines = split_generic_value(node, indent, line_length)
+                elements.append(" " * indent + lines[0])
+                elements.extend(lines[1:])
+    return elements
+
+
 def can_single_line_promise(node, indent, line_length):
     """Check if a promise node can be formatted on a single line."""
     if node.type != "promise":
@@ -217,18 +325,21 @@ def can_single_line_promise(node, indent, line_length):
     has_continuation = next_sib and next_sib.type == "half_promise"
     if len(attr_children) > 1 or has_continuation:
         return False
-    promiser_node = next((c for c in children if c.type == "promiser"), None)
-    if not promiser_node:
+    # Promises with stakeholder + attributes are always multi-line
+    if has_stakeholder(children) and attr_children:
+        return False
+    # Stakeholders that need splitting can't be single-lined
+    if has_stakeholder(children) and stakeholder_needs_splitting(
+        children, indent, line_length
+    ):
+        return False
+    prefix = promiser_line(children)
+    if not prefix:
         return False
     if attr_children:
-        line = (
-            text(promiser_node)
-            + " "
-            + stringify_single_line_node(attr_children[0])
-            + ";"
-        )
+        line = prefix + " " + stringify_single_line_node(attr_children[0]) + ";"
     else:
-        line = text(promiser_node) + ";"
+        line = prefix + ";"
     return indent + len(line) <= line_length
 
 
@@ -293,23 +404,45 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
         fmt.print_lines(lines, indent=0)
         return
     if node.type == "promise":
-        # Single-line promise: if exactly 1 attribute, no half_promise continuation,
-        # not inside a class guard, and the whole line fits in line_length
+        if can_single_line_promise(node, indent, line_length):
+            prefix = promiser_line(children)
+            assert prefix is not None
+            attr_node = next((c for c in children if c.type == "attribute"), None)
+            if attr_node:
+                line = prefix + " " + stringify_single_line_node(attr_node) + ";"
+            else:
+                line = prefix + ";"
+            fmt.print(line, indent)
+            return
+        # Multi-line promise with stakeholder that needs splitting
         attr_children = [c for c in children if c.type == "attribute"]
-        next_sib = node.next_named_sibling
-        has_continuation = next_sib and next_sib.type == "half_promise"
-        if len(attr_children) == 1 and not has_continuation:
-            promiser_node = next((c for c in children if c.type == "promiser"), None)
-            if promiser_node:
-                line = (
-                    text(promiser_node)
-                    + " "
-                    + stringify_single_line_node(attr_children[0])
-                    + ";"
-                )
-                if indent + len(line) <= line_length:
-                    fmt.print(line, indent)
-                    return
+        if has_stakeholder(children) and stakeholder_needs_splitting(
+            children, indent, line_length
+        ):
+            opening, elements, close_indent = split_stakeholder(
+                children, indent, bool(attr_children), line_length
+            )
+            fmt.print(opening, indent)
+            fmt.print_lines(elements, indent=0)
+            if attr_children:
+                fmt.print("}", close_indent)
+            else:
+                fmt.print("};", close_indent)
+                return
+            for child in children:
+                if child.type in {"promiser", "->", "stakeholder"}:
+                    continue
+                autoformat(child, fmt, line_length, macro_indent, indent)
+            return
+        # Multi-line promise: print promiser (with stakeholder) then recurse for rest
+        prefix = promiser_line(children)
+        if prefix:
+            fmt.print(prefix, indent)
+            for child in children:
+                if child.type in {"promiser", "->", "stakeholder"}:
+                    continue
+                autoformat(child, fmt, line_length, macro_indent, indent)
+            return
     if children:
         for child in children:
             # Blank line between bundle sections
