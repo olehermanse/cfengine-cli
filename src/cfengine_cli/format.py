@@ -2,6 +2,27 @@ import tree_sitter_cfengine as tscfengine
 from tree_sitter import Language, Parser, Node
 from cfbs.pretty import pretty_file, pretty_check_file
 
+# Node types that increase indentation by 2 when entered
+INDENTED_TYPES = {
+    "bundle_section",
+    "class_guarded_promises",
+    "class_guarded_body_attributes",
+    "class_guarded_promise_block_attributes",
+    "promise",
+    "half_promise",
+    "attribute",
+}
+
+CLASS_GUARD_TYPES = {
+    "class_guarded_promises",
+    "class_guarded_body_attributes",
+    "class_guarded_promise_block_attributes",
+}
+
+BLOCK_TYPES = {"bundle_block", "promise_block", "body_block"}
+
+PROMISER_PARTS = {"promiser", "->", "stakeholder"}
+
 
 def format_json_file(filename, check):
     assert filename.endswith(".json")
@@ -31,7 +52,6 @@ class Formatter:
         self.buffer = ""
 
     def _write(self, message, end="\n"):
-        # print(message, end=end)
         self.buffer += message + end
 
     def print_lines(self, lines, indent):
@@ -51,10 +71,18 @@ class Formatter:
             string = text(string)
         self._write(string, end="")
 
+    def blank_line(self):
+        self.print("", 0)
+
     def update_previous(self, node):
         tmp = self.previous
         self.previous = node
         return tmp
+
+
+# ---------------------------------------------------------------------------
+# Stringify helpers — flatten nodes into single-line strings
+# ---------------------------------------------------------------------------
 
 
 def stringify_parameter_list(parts):
@@ -90,16 +118,11 @@ def stringify_parameter_list(parts):
 def stringify_single_line_nodes(nodes):
     """Join a list of tree-sitter nodes into a single-line string.
 
-    Operates on the direct child nodes of a CFEngine syntax construct
-    (e.g. a list, call, or attribute). Each child is recursively
-    flattened via stringify_single_line_node(). Spacing rules:
+    Spacing rules:
       - A space is inserted after each "," separator.
       - A space is inserted before and after "=>" (fat arrow).
+      - A space is inserted after "{" and before "}".
       - No extra space otherwise (e.g. no space after "(" or before ")").
-
-    Used by stringify_single_line_node() to recursively flatten any node with
-    children, and by maybe_split_generic_list() to attempt a single-line
-    rendering before falling back to multi-line splitting.
     """
     result = ""
     previous = None
@@ -124,6 +147,11 @@ def stringify_single_line_node(node):
     if not node.children:
         return text(node)
     return stringify_single_line_nodes(node.children)
+
+
+# ---------------------------------------------------------------------------
+# List / rval splitting — multi-line formatting for long values
+# ---------------------------------------------------------------------------
 
 
 def split_generic_value(node, indent, line_length):
@@ -193,6 +221,11 @@ def maybe_split_rval(node, indent, offset, line_length):
     return split_rval(node, indent, line_length)
 
 
+# ---------------------------------------------------------------------------
+# Attribute formatting
+# ---------------------------------------------------------------------------
+
+
 def attempt_split_attribute(node, indent, line_length):
     assert len(node.children) == 3
     lval = node.children[0]
@@ -219,31 +252,47 @@ def stringify(node, indent, line_length):
     return [single_line]
 
 
-def has_stakeholder(children):
-    return any(c.type == "stakeholder" for c in children)
+# ---------------------------------------------------------------------------
+# Stakeholder helpers
+# ---------------------------------------------------------------------------
 
 
-def stakeholder_has_comments(children):
+def _get_stakeholder_list(children):
+    """Return the list node inside a stakeholder, or None."""
     stakeholder = next((c for c in children if c.type == "stakeholder"), None)
     if not stakeholder:
+        return None
+    return next((c for c in stakeholder.children if c.type == "list"), None)
+
+
+def _stakeholder_has_comments(children):
+    list_node = _get_stakeholder_list(children)
+    if not list_node:
         return False
-    for child in stakeholder.children:
-        if child.type == "list":
-            return any(c.type == "comment" for c in child.children)
+    return any(c.type == "comment" for c in list_node.children)
+
+
+def _has_trailing_comma(middle):
+    """Check if list middle nodes end with a trailing comma."""
+    for node in reversed(middle):
+        if node.type == ",":
+            return True
+        if node.type != "comment":
+            return False
     return False
 
 
-def promiser_prefix(children):
-    """Build the promiser text (without stakeholder)."""
+def _promiser_text(children):
+    """Return the raw promiser string, or None."""
     promiser_node = next((c for c in children if c.type == "promiser"), None)
     if not promiser_node:
         return None
     return text(promiser_node)
 
 
-def promiser_line(children):
-    """Build the promiser prefix: promiser + optional '-> stakeholder'."""
-    prefix = promiser_prefix(children)
+def _promiser_line_with_stakeholder(children):
+    """Build 'promiser -> { stakeholder }' as a single-line string, or None."""
+    prefix = _promiser_text(children)
     if not prefix:
         return None
     arrow = next((c for c in children if c.type == "->"), None)
@@ -253,57 +302,23 @@ def promiser_line(children):
     return prefix
 
 
-def stakeholder_needs_splitting(children, indent, line_length):
+def _stakeholder_needs_splitting(children, indent, line_length):
     """Check if the stakeholder list needs to be split across multiple lines."""
-    if stakeholder_has_comments(children):
+    if _stakeholder_has_comments(children):
         return True
-    prefix = promiser_line(children)
-    if not prefix:
+    line = _promiser_line_with_stakeholder(children)
+    if not line:
         return False
-    return indent + len(prefix) > line_length
+    return indent + len(line) > line_length
 
 
-def split_stakeholder(children, indent, has_attributes, line_length):
-    """Split a stakeholder list across multiple lines.
-
-    Returns (opening_line, element_lines, closing_str) where:
-    - opening_line: 'promiser -> {' to print at promise indent
-    - element_lines: pre-indented element strings
-    - closing_str: '}' or '};' pre-indented at the appropriate level
-    """
-    prefix = promiser_prefix(children)
-    assert prefix is not None
-    opening = prefix + " -> {"
-    stakeholder = next(c for c in children if c.type == "stakeholder")
-    list_node = next(c for c in stakeholder.children if c.type == "list")
-    middle = list_node.children[1:-1]  # between { and }
-    element_indent = indent + 4
-    has_comments = stakeholder_has_comments(children)
-    if has_attributes or has_comments:
-        close_indent = indent + 2
-    else:
-        close_indent = indent
-    elements = format_stakeholder_elements(middle, element_indent, line_length)
-    return opening, elements, close_indent
-
-
-def has_trailing_comma(middle):
-    """Check if a list's middle nodes end with a trailing comma."""
-    for node in reversed(middle):
-        if node.type == ",":
-            return True
-        if node.type != "comment":
-            return False
-    return False
-
-
-def format_stakeholder_elements(middle, indent, line_length):
-    """Format the middle elements of a stakeholder list."""
-    has_comments = any(n.type == "comment" for n in middle)
-    if not has_comments:
-        if has_trailing_comma(middle):
+def _format_stakeholder_elements(middle, indent, line_length):
+    """Format the middle elements (between { and }) of a stakeholder list."""
+    if not any(n.type == "comment" for n in middle):
+        if _has_trailing_comma(middle):
             return split_generic_list(middle, indent, line_length)
         return maybe_split_generic_list(middle, indent, line_length)
+    # Comments present — format element-by-element to preserve them
     elements = []
     for node in middle:
         if node.type == ",":
@@ -323,36 +338,218 @@ def format_stakeholder_elements(middle, indent, line_length):
     return elements
 
 
+# ---------------------------------------------------------------------------
+# Promise formatting
+# ---------------------------------------------------------------------------
+
+
+def _has_stakeholder(children):
+    return any(c.type == "stakeholder" for c in children)
+
+
 def can_single_line_promise(node, indent, line_length):
     """Check if a promise node can be formatted on a single line."""
     if node.type != "promise":
         return False
     children = node.children
-    attr_children = [c for c in children if c.type == "attribute"]
+    attrs = [c for c in children if c.type == "attribute"]
     next_sib = node.next_named_sibling
-    has_continuation = next_sib and next_sib.type == "half_promise"
-    if len(attr_children) > 1 or has_continuation:
+    if len(attrs) > 1 or (next_sib and next_sib.type == "half_promise"):
         return False
-    # Promises with stakeholder + attributes are always multi-line
-    if has_stakeholder(children) and attr_children:
+    if _has_stakeholder(children) and attrs:
         return False
-    # Stakeholders that need splitting can't be single-lined
-    if has_stakeholder(children) and stakeholder_needs_splitting(
+    if _has_stakeholder(children) and _stakeholder_needs_splitting(
         children, indent, line_length
     ):
         return False
-    prefix = promiser_line(children)
-    if not prefix:
+    line = _promiser_line_with_stakeholder(children)
+    if not line:
         return False
-    if attr_children:
-        line = prefix + " " + stringify_single_line_node(attr_children[0]) + ";"
+    if attrs:
+        line += " " + stringify_single_line_node(attrs[0]) + ";"
     else:
-        line = prefix + ";"
+        line += ";"
     return indent + len(line) <= line_length
+
+
+def _format_promise(node, children, fmt, indent, line_length, macro_indent):
+    """Format a promise node. Returns True if handled, False to fall through."""
+    # Single-line promise
+    if can_single_line_promise(node, indent, line_length):
+        prefix = _promiser_line_with_stakeholder(children)
+        assert prefix is not None
+        attr = next((c for c in children if c.type == "attribute"), None)
+        if attr:
+            line = prefix + " " + stringify_single_line_node(attr) + ";"
+        else:
+            line = prefix + ";"
+        fmt.print(line, indent)
+        return True
+
+    # Multi-line with split stakeholder
+    if _has_stakeholder(children) and _stakeholder_needs_splitting(
+        children, indent, line_length
+    ):
+        attrs = [c for c in children if c.type == "attribute"]
+        promiser = _promiser_text(children)
+        assert promiser is not None
+        fmt.print(promiser + " -> {", indent)
+
+        list_node = _get_stakeholder_list(children)
+        assert list_node is not None
+        middle = list_node.children[1:-1]
+        element_indent = indent + 4
+        elements = _format_stakeholder_elements(middle, element_indent, line_length)
+        fmt.print_lines(elements, indent=0)
+
+        has_comments = _stakeholder_has_comments(children)
+        close_indent = indent + 2 if (attrs or has_comments) else indent
+        if attrs:
+            fmt.print("}", close_indent)
+            _format_remaining_children(children, fmt, indent, line_length, macro_indent)
+        else:
+            fmt.print("};", close_indent)
+        return True
+
+    # Multi-line with inline stakeholder
+    prefix = _promiser_line_with_stakeholder(children)
+    if prefix:
+        fmt.print(prefix, indent)
+        _format_remaining_children(children, fmt, indent, line_length, macro_indent)
+        return True
+
+    return False
+
+
+def _format_remaining_children(children, fmt, indent, line_length, macro_indent):
+    """Format promise children, skipping promiser/stakeholder parts."""
+    for child in children:
+        if child.type in PROMISER_PARTS:
+            continue
+        autoformat(child, fmt, line_length, macro_indent, indent)
+
+
+# ---------------------------------------------------------------------------
+# Block header formatting (bundle, body, promise blocks)
+# ---------------------------------------------------------------------------
+
+
+def _format_block_header(node, fmt):
+    """Format block header and return the body's children list."""
+    header_parts = []
+    header_comments = []
+    for x in node.children[0:-1]:
+        if x.type == "comment":
+            header_comments.append(text(x))
+        elif x.type == "parameter_list":
+            parts = []
+            for p in x.children:
+                if p.type == "comment":
+                    header_comments.append(text(p))
+                else:
+                    parts.append(text(p))
+            header_parts[-1] = header_parts[-1] + stringify_parameter_list(parts)
+        else:
+            header_parts.append(text(x))
+    line = " ".join(header_parts)
+    if not fmt.empty:
+        prev_sib = node.prev_named_sibling
+        if not (prev_sib and prev_sib.type == "comment"):
+            fmt.blank_line()
+    fmt.print(line, 0)
+    for i, comment in enumerate(header_comments):
+        if comment.strip() == "#":
+            prev_is_comment = i > 0 and header_comments[i - 1].strip() != "#"
+            next_is_comment = (
+                i + 1 < len(header_comments) and header_comments[i + 1].strip() != "#"
+            )
+            if not (prev_is_comment and next_is_comment):
+                continue
+        fmt.print(comment, 0)
+    return node.children[-1].children
+
+
+# ---------------------------------------------------------------------------
+# Blank line logic
+# ---------------------------------------------------------------------------
+
+
+def _needs_blank_line_before(child, indent, line_length):
+    """Determine if a blank line should be inserted before this child."""
+    prev = child.prev_named_sibling
+    if not prev:
+        return False
+
+    if child.type == "bundle_section":
+        return prev.type == "bundle_section"
+
+    if child.type == "promise" and prev.type in {"promise", "half_promise"}:
+        promise_indent = indent + 2
+        both_single = (
+            prev.type == "promise"
+            and can_single_line_promise(prev, promise_indent, line_length)
+            and can_single_line_promise(child, promise_indent, line_length)
+        )
+        return not both_single
+
+    if child.type in CLASS_GUARD_TYPES:
+        return prev.type in {"promise", "half_promise", "class_guarded_promises"}
+
+    if child.type == "comment":
+        if prev.type not in {"promise", "half_promise"} | CLASS_GUARD_TYPES:
+            return False
+        parent = child.parent
+        return bool(
+            parent and parent.type in {"bundle_section", "class_guarded_promises"}
+        )
+
+    return False
+
+
+# ---------------------------------------------------------------------------
+# Comment formatting
+# ---------------------------------------------------------------------------
+
+
+def _is_empty_comment(node):
+    """Check if a bare '#' comment should be dropped."""
+    if text(node).strip() != "#":
+        return False
+    prev = node.prev_named_sibling
+    nxt = node.next_named_sibling
+    return not (prev and prev.type == "comment" and nxt and nxt.type == "comment")
+
+
+def _skip_comments(sibling, direction="next"):
+    """Walk past adjacent comments to find the nearest non-comment sibling."""
+    while sibling and sibling.type == "comment":
+        sibling = (
+            sibling.next_named_sibling
+            if direction == "next"
+            else sibling.prev_named_sibling
+        )
+    return sibling
+
+
+def _comment_indent(node, indent):
+    """Determine the indentation level for a leaf comment node."""
+    nearest = _skip_comments(node.next_named_sibling, "next")
+    if nearest is None:
+        nearest = _skip_comments(node.prev_named_sibling, "prev")
+    if nearest and nearest.type in INDENTED_TYPES:
+        return indent + 2
+    return indent
+
+
+# ---------------------------------------------------------------------------
+# Main recursive formatter
+# ---------------------------------------------------------------------------
 
 
 def autoformat(node, fmt, line_length, macro_indent, indent=0):
     previous = fmt.update_previous(node)
+
+    # Macro handling
     if previous and previous.type == "macro" and text(previous).startswith("@else"):
         indent = macro_indent
     if node.type == "macro":
@@ -362,184 +559,47 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
         elif text(node).startswith("@else"):
             indent = macro_indent
         return
+
+    # Block header (bundle/body/promise blocks)
     children = node.children
-    if node.type in ["bundle_block", "promise_block", "body_block"]:
-        header_parts = []
-        header_comments = []
-        for x in node.children[0:-1]:
-            if x.type == "comment":
-                header_comments.append(text(x))
-            elif x.type == "parameter_list":
-                parts = []
-                for p in x.children:
-                    if p.type == "comment":
-                        header_comments.append(text(p))
-                    else:
-                        parts.append(text(p))
-                # Append directly to previous part (no space before parens)
-                header_parts[-1] = header_parts[-1] + stringify_parameter_list(parts)
-            else:
-                header_parts.append(text(x))
-        line = " ".join(header_parts)
-        if not fmt.empty:
-            prev_sib = node.prev_named_sibling
-            if not (prev_sib and prev_sib.type == "comment"):
-                fmt.print("", 0)
-        fmt.print(line, 0)
-        for i, comment in enumerate(header_comments):
-            if comment.strip() == "#":
-                prev_is_comment = i > 0 and header_comments[i - 1].strip() != "#"
-                next_is_comment = (
-                    i + 1 < len(header_comments)
-                    and header_comments[i + 1].strip() != "#"
-                )
-                if not (prev_is_comment and next_is_comment):
-                    continue
-            fmt.print(comment, 0)
-        children = node.children[-1].children
-    if node.type in [
-        "bundle_section",
-        "class_guarded_promises",
-        "class_guarded_body_attributes",
-        "class_guarded_promise_block_attributes",
-        "promise",
-        "half_promise",
-        "attribute",
-    ]:
+    if node.type in BLOCK_TYPES:
+        children = _format_block_header(node, fmt)
+
+    # Indentation
+    if node.type in INDENTED_TYPES:
         indent += 2
+
+    # Attribute — stringify and return
     if node.type == "attribute":
-        lines = stringify(node, indent, line_length)
-        fmt.print_lines(lines, indent=0)
+        fmt.print_lines(stringify(node, indent, line_length), indent=0)
         return
+
+    # Promise — delegate to promise formatter
     if node.type == "promise":
-        if can_single_line_promise(node, indent, line_length):
-            prefix = promiser_line(children)
-            assert prefix is not None
-            attr_node = next((c for c in children if c.type == "attribute"), None)
-            if attr_node:
-                line = prefix + " " + stringify_single_line_node(attr_node) + ";"
-            else:
-                line = prefix + ";"
-            fmt.print(line, indent)
+        if _format_promise(node, children, fmt, indent, line_length, macro_indent):
             return
-        # Multi-line promise with stakeholder that needs splitting
-        attr_children = [c for c in children if c.type == "attribute"]
-        if has_stakeholder(children) and stakeholder_needs_splitting(
-            children, indent, line_length
-        ):
-            opening, elements, close_indent = split_stakeholder(
-                children, indent, bool(attr_children), line_length
-            )
-            fmt.print(opening, indent)
-            fmt.print_lines(elements, indent=0)
-            if attr_children:
-                fmt.print("}", close_indent)
-            else:
-                fmt.print("};", close_indent)
-                return
-            for child in children:
-                if child.type in {"promiser", "->", "stakeholder"}:
-                    continue
-                autoformat(child, fmt, line_length, macro_indent, indent)
-            return
-        # Multi-line promise: print promiser (with stakeholder) then recurse for rest
-        prefix = promiser_line(children)
-        if prefix:
-            fmt.print(prefix, indent)
-            for child in children:
-                if child.type in {"promiser", "->", "stakeholder"}:
-                    continue
-                autoformat(child, fmt, line_length, macro_indent, indent)
-            return
+
+    # Interior node with children — recurse
     if children:
         for child in children:
-            # Blank line between bundle sections
-            if child.type == "bundle_section":
-                prev = child.prev_named_sibling
-                if prev and prev.type == "bundle_section":
-                    fmt.print("", 0)
-            # Blank line between promises in a section
-            elif child.type == "promise":
-                prev = child.prev_named_sibling
-                if prev and prev.type in ["promise", "half_promise"]:
-                    # Skip blank line between consecutive single-line promises
-                    promise_indent = indent + 2
-                    both_single = (
-                        prev.type == "promise"
-                        and can_single_line_promise(prev, promise_indent, line_length)
-                        and can_single_line_promise(child, promise_indent, line_length)
-                    )
-                    if not both_single:
-                        fmt.print("", 0)
-            elif child.type in [
-                "class_guarded_promises",
-                "class_guarded_body_attributes",
-                "class_guarded_promise_block_attributes",
-            ]:
-                prev = child.prev_named_sibling
-                if prev and prev.type in [
-                    "promise",
-                    "half_promise",
-                    "class_guarded_promises",
-                ]:
-                    fmt.print("", 0)
-            elif child.type == "comment":
-                prev = child.prev_named_sibling
-                if prev and prev.type in [
-                    "promise",
-                    "half_promise",
-                    "class_guarded_promises",
-                    "class_guarded_body_attributes",
-                    "class_guarded_promise_block_attributes",
-                ]:
-                    parent = child.parent
-                    if parent and parent.type in [
-                        "bundle_section",
-                        "class_guarded_promises",
-                    ]:
-                        fmt.print("", 0)
+            if _needs_blank_line_before(child, indent, line_length):
+                fmt.blank_line()
             autoformat(child, fmt, line_length, macro_indent, indent)
         return
-    if node.type in [",", ";"]:
+
+    # Leaf nodes
+    if node.type in {",", ";"}:
         fmt.print_same_line(node)
-        return
-    if node.type == "comment":
-        if text(node).strip() == "#":
-            prev = node.prev_named_sibling
-            nxt = node.next_named_sibling
-            if not (prev and prev.type == "comment" and nxt and nxt.type == "comment"):
-                return
-        comment_indent = indent
-        next_sib = node.next_named_sibling
-        while next_sib and next_sib.type == "comment":
-            next_sib = next_sib.next_named_sibling
-        if next_sib is None:
-            prev_sib = node.prev_named_sibling
-            while prev_sib and prev_sib.type == "comment":
-                prev_sib = prev_sib.prev_named_sibling
-            if prev_sib and prev_sib.type in [
-                "bundle_section",
-                "class_guarded_promises",
-                "class_guarded_body_attributes",
-                "class_guarded_promise_block_attributes",
-                "promise",
-                "half_promise",
-                "attribute",
-            ]:
-                comment_indent = indent + 2
-        elif next_sib.type in [
-            "bundle_section",
-            "class_guarded_promises",
-            "class_guarded_body_attributes",
-            "class_guarded_promise_block_attributes",
-            "promise",
-            "half_promise",
-            "attribute",
-        ]:
-            comment_indent = indent + 2
-        fmt.print(node, comment_indent)
-        return
-    fmt.print(node, indent)
+    elif node.type == "comment":
+        if not _is_empty_comment(node):
+            fmt.print(node, _comment_indent(node, indent))
+    else:
+        fmt.print(node, indent)
+
+
+# ---------------------------------------------------------------------------
+# Public entry points
+# ---------------------------------------------------------------------------
 
 
 def format_policy_file(filename, line_length, check):
