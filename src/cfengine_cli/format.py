@@ -215,14 +215,20 @@ def can_single_line_promise(node, indent, line_length):
     attr_children = [c for c in children if c.type == "attribute"]
     next_sib = node.next_named_sibling
     has_continuation = next_sib and next_sib.type == "half_promise"
-    if len(attr_children) != 1 or has_continuation:
+    if len(attr_children) > 1 or has_continuation:
         return False
     promiser_node = next((c for c in children if c.type == "promiser"), None)
     if not promiser_node:
         return False
-    line = (
-        text(promiser_node) + " " + stringify_single_line_node(attr_children[0]) + ";"
-    )
+    if attr_children:
+        line = (
+            text(promiser_node)
+            + " "
+            + stringify_single_line_node(attr_children[0])
+            + ";"
+        )
+    else:
+        line = text(promiser_node) + ";"
     return indent + len(line) <= line_length
 
 
