@@ -338,7 +338,13 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
                     fmt.print("", 0)
             elif child.type == "comment":
                 prev = child.prev_named_sibling
-                if prev and prev.type in ["promise", "half_promise"]:
+                if prev and prev.type in [
+                    "promise",
+                    "half_promise",
+                    "class_guarded_promises",
+                    "class_guarded_body_attributes",
+                    "class_guarded_promise_block_attributes",
+                ]:
                     parent = child.parent
                     if parent and parent.type in [
                         "bundle_section",

@@ -9,6 +9,7 @@ bundle agent main
       # Inside promise, next to attributes
       string => "value";
 
+    # Before next promise
     "some_list"
       slist => {
         "Strings that go in a list which would be long",
@@ -16,6 +17,14 @@ bundle agent main
         "More strings",
         "More and more and more and more",
       };
+
+    # A class guard shifts everything over 2 spaces:
+    class_guard::
+      # Inside promise type
+      "some_var"
+        if => "something",
+        # Inside promise, next to attributes
+        string => "value";
 
     # A class guard shifts everything over 2 spaces:
     class_guard::
