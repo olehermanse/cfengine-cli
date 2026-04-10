@@ -90,7 +90,9 @@ def format(names, line_length, check) -> int:
         if os.path.isdir(name):
             ret |= _format_dirname(name, line_length, check)
             continue
-    return ret
+    if check:
+        return ret
+    return 0
 
 
 def _lint(files, strict) -> int:
