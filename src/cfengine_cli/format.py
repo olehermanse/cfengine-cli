@@ -1,13 +1,21 @@
 import tree_sitter_cfengine as tscfengine
 from tree_sitter import Language, Parser, Node
-from cfbs.pretty import pretty_file
+from cfbs.pretty import pretty_file, pretty_check_file
 
 
-def format_json_file(filename):
+def format_json_file(filename, check):
     assert filename.endswith(".json")
+
+    if check:
+        r = not pretty_check_file(filename)
+        if r:
+            print(f"JSON file '{filename}' needs reformatting")
+        return r
+
     r = pretty_file(filename)
     if r:
         print(f"JSON file '{filename}' was reformatted")
+    return r
 
 
 def text(node: Node):
@@ -534,8 +542,9 @@ def autoformat(node, fmt, line_length, macro_indent, indent=0):
     fmt.print(node, indent)
 
 
-def format_policy_file(filename, line_length):
+def format_policy_file(filename, line_length, check):
     assert filename.endswith(".cf")
+
     PY_LANGUAGE = Language(tscfengine.language())
     parser = Parser(PY_LANGUAGE)
 
@@ -551,12 +560,17 @@ def format_policy_file(filename, line_length):
 
     new_data = fmt.buffer + "\n"
     if new_data != original_data.decode("utf-8"):
+        if check:
+            print(f"Policy file '{filename}' needs reformatting")
+            return 1
+
         with open(filename, "w") as f:
             f.write(new_data)
         print(f"Policy file '{filename}' was reformatted")
+    return 0
 
 
-def format_policy_fin_fout(fin, fout, line_length):
+def format_policy_fin_fout(fin, fout, line_length, check):
     PY_LANGUAGE = Language(tscfengine.language())
     parser = Parser(PY_LANGUAGE)
 
@@ -571,3 +585,4 @@ def format_policy_fin_fout(fin, fout, line_length):
 
     new_data = fmt.buffer + "\n"
     fout.write(new_data)
+    return 0

@@ -50,34 +50,33 @@ def deploy() -> int:
     return r
 
 
-def _format_filename(filename, line_length):
+def _format_filename(filename, line_length, check):
     if filename.startswith("./."):
-        return
+        return 0
     if filename.endswith(".json"):
-        format_json_file(filename)
-        return
+        return format_json_file(filename, check)
     if filename.endswith(".cf"):
-        format_policy_file(filename, line_length)
-        return
+        return format_policy_file(filename, line_length, check)
     raise UserError(f"Unrecognized file format: {filename}")
 
 
-def _format_dirname(directory, line_length):
+def _format_dirname(directory, line_length, check):
+    ret = 0
     for filename in find(directory, extension=".json"):
-        _format_filename(filename, line_length)
+        ret |= _format_filename(filename, line_length, check)
     for filename in find(directory, extension=".cf"):
-        _format_filename(filename, line_length)
+        ret |= _format_filename(filename, line_length, check)
+    return ret
 
 
-def format(names, line_length) -> int:
+def format(names, line_length, check) -> int:
     if not names:
-        _format_dirname(".", line_length)
-        return 0
+        return _format_dirname(".", line_length, check)
     if len(names) == 1 and names[0] == "-":
         # Special case, format policy file from stdin to stdout
-        format_policy_fin_fout(sys.stdin, sys.stdout, line_length)
-        return 0
+        return format_policy_fin_fout(sys.stdin, sys.stdout, line_length, check)
 
+    ret = 0
     for name in names:
         if name == "-":
             raise UserError(
@@ -86,12 +85,12 @@ def format(names, line_length) -> int:
         if not os.path.exists(name):
             raise UserError(f"{name} does not exist")
         if os.path.isfile(name):
-            _format_filename(name, line_length)
+            ret |= _format_filename(name, line_length, check)
             continue
         if os.path.isdir(name):
-            _format_dirname(name, line_length)
+            ret |= _format_dirname(name, line_length, check)
             continue
-    return 0
+    return ret
 
 
 def _lint(files, strict) -> int:
