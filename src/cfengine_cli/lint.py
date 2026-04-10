@@ -37,15 +37,54 @@ from tree_sitter import Language, Node, Parser, Tree
 from cfbs.validate import validate_config
 from cfbs.cfbs_config import CFBSConfig
 from cfbs.utils import find
-from cfengine_cli.policy_language import (
-    DEPRECATED_PROMISE_TYPES,
-    ALLOWED_BUNDLE_TYPES,
-    BUILTIN_PROMISE_TYPES,
-    BUILTIN_FUNCTIONS,
-)
 from cfengine_cli.utils import UserError
 
 LINT_EXTENSIONS = (".cf", ".json")
+
+
+def _load_syntax_description(path: str | None = None) -> dict:
+    """Load and return the parsed syntax-description.json file."""
+    if path is None:
+        path = os.path.join(os.path.dirname(__file__), "syntax-description.json")
+    with open(path, "r") as f:
+        return json.load(f)
+
+
+def _derive_syntax_sets(data: dict) -> tuple:
+    """Derive the four sets used for linting from a loaded syntax-description dict.
+
+    Returns: (ALLOWED_BUNDLE_TYPES, BUILTIN_PROMISE_TYPES, BUILTIN_FUNCTIONS, DEPRECATED_PROMISE_TYPES)
+    """
+    builtin_body_types = set(data.get("bodyTypes", {}).keys())
+
+    allowed_bundle_types = data.get("bundleTypes", {}).keys()
+
+    builtin_promise_types = set(data.get("promiseTypes", {}).keys())
+
+    builtin_functions = set(data.get("functions", {}).keys())
+
+    deprecated_promise_types = {
+        "defaults",
+        "guest_environments",
+    }  # Has to be hardcoded, not tagged in syntax-description.json
+
+    return (
+        builtin_body_types,
+        allowed_bundle_types,
+        builtin_promise_types,
+        builtin_functions,
+        deprecated_promise_types,
+    )
+
+
+_SYNTAX_DATA = _load_syntax_description()
+(
+    _,
+    ALLOWED_BUNDLE_TYPES,
+    BUILTIN_PROMISE_TYPES,
+    BUILTIN_FUNCTIONS,
+    DEPRECATED_PROMISE_TYPES,
+) = _derive_syntax_sets(_SYNTAX_DATA)
 
 
 def _qualify(name: str, namespace: str) -> str:
