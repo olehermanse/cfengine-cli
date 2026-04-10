@@ -48,6 +48,7 @@ def _get_arg_parser():
     fmt = subp.add_parser("format", help="Autoformat .json and .cf files")
     fmt.add_argument("files", nargs="*", help="Files to format")
     fmt.add_argument("--line-length", default=80, type=int, help="Maximum line length")
+    fmt.add_argument("--check", action="store_true")
     lnt = subp.add_parser(
         "lint",
         help="Look for syntax errors and other simple mistakes",
@@ -136,7 +137,7 @@ def run_command_with_args(args) -> int:
     if args.command == "deploy":
         return commands.deploy()
     if args.command == "format":
-        return commands.format(args.files, args.line_length)
+        return commands.format(args.files, args.line_length, args.check)
     if args.command == "lint":
         return commands.lint(args.files, (args.strict.lower() in ("y", "ye", "yes")))
     if args.command == "report":

@@ -212,7 +212,7 @@ def fn_autoformat(_origin_path, snippet_path, language, _first_line, _last_line)
                 raise UserError(f"Invalid json in '{snippet_path}'")
         case "cf":
             # Note: Dead code - Not used for CFEngine policy yet
-            format_policy_file(snippet_path, 80)
+            format_policy_file(snippet_path, 80, False)
 
 
 def _translate_language(x):
