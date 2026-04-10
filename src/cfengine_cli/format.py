@@ -28,7 +28,7 @@ BLOCK_TYPES = {"bundle_block", "promise_block", "body_block"}
 PROMISER_PARTS = {"promiser", "->", "stakeholder"}
 
 
-def format_json_file(filename: str, check: bool) -> None:
+def format_json_file(filename: str, check: bool) -> int:
     """Reformat a JSON file in place using cfbs pretty-printer."""
     assert filename.endswith(".json")
 
@@ -36,12 +36,12 @@ def format_json_file(filename: str, check: bool) -> None:
         r = not pretty_check_file(filename)
         if r:
             print(f"JSON file '{filename}' needs reformatting")
-        return r
+        return int(r)
 
     r = pretty_file(filename)
     if r:
         print(f"JSON file '{filename}' was reformatted")
-    return r
+    return int(r)
 
 
 def text(node: Node) -> str:
@@ -654,7 +654,7 @@ def autoformat(
 # ---------------------------------------------------------------------------
 
 
-def format_policy_file(filename: str, line_length: int, check: bool) -> None:
+def format_policy_file(filename: str, line_length: int, check: bool) -> int:
     """Format a .cf policy file in place, writing only if content changed."""
     assert filename.endswith(".cf")
 
@@ -685,7 +685,7 @@ def format_policy_file(filename: str, line_length: int, check: bool) -> None:
 
 def format_policy_fin_fout(
     fin: IO[str], fout: IO[str], line_length: int, check: bool
-) -> None:
+) -> int:
     """Format CFEngine policy read from fin, writing the result to fout."""
     PY_LANGUAGE = Language(tscfengine.language())
     parser = Parser(PY_LANGUAGE)

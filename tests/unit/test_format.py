@@ -82,7 +82,7 @@ def _format(code: str, line_length: int = 80) -> str:
     """Format CFEngine source via format_policy_fin_fout and return the result."""
     fin = io.StringIO(code)
     fout = io.StringIO()
-    format_policy_fin_fout(fin, fout, line_length)
+    format_policy_fin_fout(fin, fout, line_length, False)
     return fout.getvalue()
 
 
