@@ -21,10 +21,10 @@ bundle agent strings
 bundle agent slists
 {
   vars:
-    "variable_name" slist => {"one", "two", "three", "four", "five", "six"};
+    "variable_name" slist => { "one", "two", "three", "four", "five", "six" };
 
     "variable_name"
-      slist => {"one", "two", "three", "four", "five", "six", "seven"};
+      slist => { "one", "two", "three", "four", "five", "six", "seven" };
 
     "variable_name"
       slist => {

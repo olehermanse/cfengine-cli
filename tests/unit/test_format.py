@@ -48,7 +48,7 @@ def test_stringify_single_line_nodes():
         _leaf("string", '"b"'),
         _leaf("}"),
     ]
-    assert stringify_single_line_nodes(nodes) == '{"a", "b"}'
+    assert stringify_single_line_nodes(nodes) == '{ "a", "b" }'
     nodes = [
         _leaf("identifier", "package_name"),
         _leaf("=>"),

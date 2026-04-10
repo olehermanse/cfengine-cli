@@ -10,4 +10,10 @@ bundle agent main
       "libssl-dev" package_policy => "delete";
       "libpcre2-dev" package_policy => "delete";
       "libacl1-dev" package_policy => "delete";
+      "fail2ban" comment => "Ban IPs with repeated failed SSH auth attempts";
+      "binutils";
+      "bison";
+      "build-essential";
+      "libltdl7" package_policy => "delete";
+      "libltdl-dev" package_policy => "delete";
 }

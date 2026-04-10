@@ -1,0 +1,101 @@
+bundle agent main
+{
+  packages:
+    "platform-python-devel" -> { "cfbs shebang", "ENT-1234" };
+
+    "platform-python-devel" -> { "cfbs shebang", "ENT-1234" }
+      comment => "foo";
+
+    "platform-python-devel" -> { "cfbs shebang", "ENT-1234" }
+      comment => "Long comment that probably definitely exceeds the set line length limit";
+
+    "platform-python-devel" -> {
+        # foo
+      };
+
+    "platform-python-devel" -> {
+        # foo
+        "bar",
+        # baz
+      };
+
+    "python3-rpm-macros" -> {
+        "reasons for the change or where to look or who to blame", "ENT-1234"
+      }
+      comment => "foo";
+
+    "python3-rpm-macros" -> {
+        "reasons for the change or where to look or who to blame longer than line limit",
+        "ENT-1234",
+      }
+      comment => "foo";
+
+    "python3-rpm-macros" -> {
+        "many",
+        "different",
+        "stakeholders",
+        "for",
+        "this",
+        "promise",
+      }
+      comment => "foo";
+
+    "python3-rpm-macros" -> {
+        "many",
+        "different",
+        "stakeholders",
+        "for",
+        "this",
+        "promise",
+    };
+
+  packages:
+    any::
+      "platform-python-devel" -> { "cfbs shebang", "ENT-1234" };
+
+      "platform-python-devel" -> { "cfbs shebang", "ENT-1234" }
+        comment => "foo";
+
+      "platform-python-devel" -> { "cfbs shebang", "ENT-1234" }
+        comment => "Long comment that probably definitely exceeds the set line length limit";
+
+      "platform-python-devel" -> {
+          # foo
+        };
+
+      "platform-python-devel" -> {
+          # foo
+          "bar",
+          # baz
+        };
+
+      "python3-rpm-macros" -> {
+          "reasons for the change or where to look or who to blame", "ENT-1234"
+        }
+        comment => "foo";
+
+      "python3-rpm-macros" -> {
+          "reasons for the change or where to look or who to blame longer than line limit",
+          "ENT-1234",
+        }
+        comment => "foo";
+
+      "python3-rpm-macros" -> {
+          "many",
+          "different",
+          "stakeholders",
+          "for",
+          "this",
+          "promise",
+        }
+        comment => "foo";
+
+      "python3-rpm-macros" -> {
+          "many",
+          "different",
+          "stakeholders",
+          "for",
+          "this",
+          "promise",
+      };
+}
