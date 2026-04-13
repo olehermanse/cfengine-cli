@@ -133,10 +133,16 @@ def stringify_single_line_nodes(nodes: list[Node]) -> str:
     """Join tree-sitter nodes into a single-line string with CFEngine spacing.
 
     Inserts spaces after ",", around "=>", and inside "{ }".
+    Strips trailing commas immediately preceding ")" or "}".
     """
     result = ""
     previous = None
-    for node in nodes:
+    for i, node in enumerate(nodes):
+        # Strip trailing comma before closing bracket/paren
+        if node.type == ",":
+            next_node = nodes[i + 1] if i + 1 < len(nodes) else None
+            if next_node is not None and next_node.type in (")", "}"):
+                continue
         string = stringify_single_line_node(node)
         if previous and previous.type == ",":
             result += " "
@@ -188,9 +194,14 @@ def split_generic_list(middle: list[Node], indent: int, line_length: int) -> lis
             lines = split_generic_value(element, indent, line_length)
             elements.append(" " * indent + lines[0])
             elements.extend(lines[1:])
-    # Always add a trailing comma on multi-line lists
-    if elements and not elements[-1].endswith(","):
-        elements[-1] = elements[-1] + ","
+    # Always add a trailing comma on multi-line lists, on the last
+    # non-comment element (so it doesn't end up after a trailing comment).
+    for i in range(len(elements) - 1, -1, -1):
+        if elements[i].lstrip().startswith("#"):
+            continue
+        if not elements[i].endswith(","):
+            elements[i] = elements[i] + ","
+        break
     return elements
 
 
@@ -371,6 +382,13 @@ def _format_stakeholder_elements(
                 lines = split_generic_value(node, indent, line_length)
                 elements.append(" " * indent + lines[0])
                 elements.extend(lines[1:])
+    # Always add a trailing comma to the last non-comment element
+    for i in range(len(elements) - 1, -1, -1):
+        if elements[i].lstrip().startswith("#"):
+            continue
+        if not elements[i].endswith(","):
+            elements[i] = elements[i] + ","
+        break
     return elements
 
 
@@ -450,8 +468,7 @@ def _format_promise(
         elements = _format_stakeholder_elements(middle, element_indent, line_length)
         fmt.print_lines(elements, indent=0)
 
-        has_comments = _stakeholder_has_comments(children)
-        close_indent = indent + 2 if (attrs or has_comments) else indent
+        close_indent = indent + 2
         if attrs:
             fmt.print("}", close_indent)
             _format_remaining_children(children, fmt, indent, line_length, macro_indent)
