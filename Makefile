@@ -1,12 +1,16 @@
-.PHONY: default format lint install check
+.PHONY: default format lint install check venv
 
 default: check
 
-format:
+venv:
+	uv venv --clear
+	uv sync
+
+format: venv
 	uv tool run black .
 	prettier . --write
 
-lint:
+lint: venv
 	uv tool run black --check .
 	uv tool run flake8 src/ --ignore=E203,W503,E722,E731 --max-complexity=100 --max-line-length=160
 	uv tool run pyflakes src/
@@ -15,7 +19,7 @@ lint:
 install:
 	pipx install --force --editable .
 
-check: format lint install
+check: venv format lint install
 	uv run pytest
 	bash tests/run-lint-tests.sh
 	bash tests/run-format-tests.sh
