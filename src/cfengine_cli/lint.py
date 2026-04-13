@@ -42,49 +42,54 @@ from cfengine_cli.utils import UserError
 LINT_EXTENSIONS = (".cf", ".json")
 
 
-def _load_syntax_description(path: str | None = None) -> dict:
-    """Load and return the parsed syntax-description.json file."""
-    if path is None:
-        path = os.path.join(os.path.dirname(__file__), "syntax-description.json")
-    with open(path, "r") as f:
-        return json.load(f)
+@dataclass
+class SyntaxData:
+    BUILTIN_BODY_TYPES = {}
+    BUILTIN_BUNDLE_TYPES = {}
+    BUILTIN_PROMISE_TYPES = {}
+    BUILTIN_FUNCTIONS = {}
 
+    def __init__(self):
+        self._data_dict = self._load_syntax_description()
+        self._derive_syntax_dicts(self._data_dict)
 
-def _derive_syntax_sets(data: dict) -> tuple:
-    """Derive the four sets used for linting from a loaded syntax-description dict.
+        assert self.BUILTIN_BODY_TYPES
+        assert self.BUILTIN_BUNDLE_TYPES
+        assert self.BUILTIN_PROMISE_TYPES
+        assert self.BUILTIN_FUNCTIONS
 
-    Returns: (ALLOWED_BUNDLE_TYPES, BUILTIN_PROMISE_TYPES, BUILTIN_FUNCTIONS, DEPRECATED_PROMISE_TYPES)
-    """
-    builtin_body_types = set(data.get("bodyTypes", {}).keys())
+    def _load_syntax_description(self, path: str | None = None) -> dict:
+        """Load and return the parsed syntax-description.json file."""
+        if path is None:
+            path = os.path.join(os.path.dirname(__file__), "syntax-description.json")
+        with open(path, "r") as f:
+            return json.load(f)
 
-    allowed_bundle_types = data.get("bundleTypes", {}).keys()
+    def _derive_syntax_dicts(self, data: dict):
+        """Derive the five dictionaries used for linting from a loaded syntax-description json-file.
+        sets the (BUILTIN_BODY_TYPES, BUILTIN_BUNDLE_TYPES, BUILTIN_PROMISE_TYPES, BUILTIN_FUNCTIONS, DEPRECATED_PROMISE_TYPES) dicts
+        """
+        builtin_body_types = data.get("bodyTypes", {})
 
-    builtin_promise_types = set(data.get("promiseTypes", {}).keys())
+        builtin_bundle_types = data.get("bundleTypes", {})
 
-    builtin_functions = set(data.get("functions", {}).keys())
+        builtin_promise_types = data.get("promiseTypes", {})
 
-    deprecated_promise_types = {
-        "defaults",
-        "guest_environments",
-    }  # Has to be hardcoded, not tagged in syntax-description.json
+        builtin_functions = data.get("functions", {})
 
-    return (
-        builtin_body_types,
-        allowed_bundle_types,
-        builtin_promise_types,
-        builtin_functions,
-        deprecated_promise_types,
-    )
+        deprecated_promise_types = {
+            promise: builtin_promise_types.get(promise, {})
+            for promise in {
+                "defaults",
+                "guest_environments",
+            }  # Has to be hardcoded, not tagged in syntax-description.json
+        }
 
-
-_SYNTAX_DATA = _load_syntax_description()
-(
-    _,
-    ALLOWED_BUNDLE_TYPES,
-    BUILTIN_PROMISE_TYPES,
-    BUILTIN_FUNCTIONS,
-    DEPRECATED_PROMISE_TYPES,
-) = _derive_syntax_sets(_SYNTAX_DATA)
+        self.BUILTIN_BODY_TYPES = builtin_body_types
+        self.BUILTIN_BUNDLE_TYPES = builtin_bundle_types
+        self.BUILTIN_PROMISE_TYPES = builtin_promise_types
+        self.BUILTIN_FUNCTIONS = builtin_functions
+        self.DEPRECATED_PROMISE_TYPES = deprecated_promise_types
 
 
 def _qualify(name: str, namespace: str) -> str:
@@ -487,7 +492,9 @@ def _discover(policy_file: PolicyFile, state: State) -> int:
     return 0
 
 
-def _lint_node(node: Node, policy_file: PolicyFile, state: State) -> int:
+def _lint_node(
+    node: Node, policy_file: PolicyFile, state: State, syntax_data: SyntaxData
+) -> int:
     """Checks we run on each node in the syntax tree,
     utilizes state for checks which require context."""
 
@@ -503,7 +510,7 @@ def _lint_node(node: Node, policy_file: PolicyFile, state: State) -> int:
     if node.type == "promise_guard":
         assert _text(node) and len(_text(node)) > 1 and _text(node)[-1] == ":"
         promise_type = _text(node)[0:-1]
-        if promise_type in DEPRECATED_PROMISE_TYPES:
+        if promise_type in syntax_data.DEPRECATED_PROMISE_TYPES:
             _highlight_range(node, lines)
             print(
                 f"Deprecation: Promise type '{promise_type}' is deprecated {location}"
@@ -511,7 +518,7 @@ def _lint_node(node: Node, policy_file: PolicyFile, state: State) -> int:
             return 1
         if (
             state.strict
-            and promise_type not in BUILTIN_PROMISE_TYPES
+            and promise_type not in syntax_data.BUILTIN_PROMISE_TYPES
             and promise_type not in state.custom_promise_types
         ):
             _highlight_range(node, lines)
@@ -525,15 +532,18 @@ def _lint_node(node: Node, policy_file: PolicyFile, state: State) -> int:
         _highlight_range(node, lines)
         print(f"Convention: Promise type should be lowercase {location}")
         return 1
-    if node.type == "bundle_block_type" and _text(node) not in ALLOWED_BUNDLE_TYPES:
+    if (
+        node.type == "bundle_block_type"
+        and _text(node) not in syntax_data.BUILTIN_BUNDLE_TYPES
+    ):
         _highlight_range(node, lines)
         print(
-            f"Error: Bundle type must be one of ({', '.join(ALLOWED_BUNDLE_TYPES)}), not '{_text(node)}' {location}"
+            f"Error: Bundle type must be one of ({', '.join(syntax_data.BUILTIN_BUNDLE_TYPES)}), not '{_text(node)}' {location}"
         )
         return 1
     if state.strict and (
         node.type in ("bundle_block_name", "body_block_name")
-        and _text(node) in BUILTIN_FUNCTIONS
+        and _text(node) in syntax_data.BUILTIN_FUNCTIONS
     ):
         _highlight_range(node, lines)
         print(
@@ -556,7 +566,7 @@ def _lint_node(node: Node, policy_file: PolicyFile, state: State) -> int:
         if state.strict and (
             qualified_name not in state.bundles
             and qualified_name not in state.bodies
-            and name not in BUILTIN_FUNCTIONS
+            and name not in syntax_data.BUILTIN_FUNCTIONS
         ):
             _highlight_range(node, lines)
             print(
@@ -564,7 +574,7 @@ def _lint_node(node: Node, policy_file: PolicyFile, state: State) -> int:
             )
             return 1
         if (
-            name not in BUILTIN_FUNCTIONS
+            name not in syntax_data.BUILTIN_FUNCTIONS
             and state.promise_type == "vars"
             and state.attribute_name not in ("action", "classes")
         ):
@@ -605,14 +615,14 @@ def _pass_fail_state(state: State, errors: int) -> str:
     return _pass_fail_filename(pretty_filename, errors)
 
 
-def _lint(policy_file: PolicyFile, state: State) -> int:
+def _lint(policy_file: PolicyFile, state: State, syntax_data: SyntaxData) -> int:
     """Run linting rules (checks) on nodes in a policy file syntax tree."""
     assert state.mode == Mode.LINT
     errors = 0
     state.start_file(policy_file)
     for node in policy_file.nodes:
         state.navigate(node)
-        errors += _lint_node(node, policy_file, state)
+        errors += _lint_node(node, policy_file, state, syntax_data)
     message = _pass_fail_state(state, errors)
     state.end_file()
     if state.prefix:
@@ -738,7 +748,11 @@ def _args_to_filenames(args: list[str]) -> list[str]:
 
 
 def _lint_main(
-    args: list[str], strict: bool, state=None, snippet: Snippet | None = None
+    args: list[str],
+    strict: bool,
+    state=None,
+    snippet: Snippet | None = None,
+    syntax_data=None,
 ) -> int:
     """This is the main function used for linting, it does all the steps on all
     the arguments (files / folders).
@@ -764,6 +778,9 @@ def _lint_main(
         state = State()
     state.strict = strict
     state.mode = Mode.SYNTAX
+
+    if syntax_data is None:
+        syntax_data = SyntaxData()
 
     filenames = _args_to_filenames(args)
 
@@ -799,7 +816,7 @@ def _lint_main(
     state.mode = Mode.LINT
 
     for policy_file in policy_files:
-        errors += _lint(policy_file, state)
+        errors += _lint(policy_file, state, syntax_data)
 
     return errors
 
