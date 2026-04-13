@@ -188,6 +188,9 @@ def split_generic_list(middle: list[Node], indent: int, line_length: int) -> lis
             lines = split_generic_value(element, indent, line_length)
             elements.append(" " * indent + lines[0])
             elements.extend(lines[1:])
+    # Always add a trailing comma on multi-line lists
+    if elements and not elements[-1].endswith(","):
+        elements[-1] = elements[-1] + ","
     return elements
 
 

@@ -301,7 +301,7 @@ def test_stringify_single_line_node_with_children():
 def test_split_generic_list_basic():
     nodes = [_leaf("string", '"a"'), _leaf(","), _leaf("string", '"b"')]
     result = split_generic_list(nodes, 4, 80)
-    assert result == ['    "a",', '    "b"']
+    assert result == ['    "a",', '    "b",']
 
 
 def test_maybe_split_generic_list_fits():

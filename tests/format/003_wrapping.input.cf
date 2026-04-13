@@ -26,7 +26,7 @@ slist => {
 };
 "variable_name"
 slist => {
-"one","two","three","four","five","six","seven","eight","ten","eleven",
+"one","two","three","four","five","six","seven","eight","ten","eleven"
 };
 }
 
@@ -39,7 +39,7 @@ vars:
 "one", "two", "three", "four", "five", "six", "seven", "eight"
 );
 "variable_name" string => concat(
-"one","two","three","four","five","six","seven","eight","nine","ten",
+"one","two","three","four","five","six","seven","eight","nine","ten"
 );
 }
 
@@ -61,6 +61,6 @@ concat("two", "three", "four", "five", "six", "seven", "eight", "nine", ""),
 );
 "variable_name" string => concat(
 "one",
-concat("two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", ),
+concat("two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"),
 );
 }
