@@ -40,6 +40,9 @@ cfengine = "cfengine_cli.main:main"
 [tool.setuptools]
 license-files = [] # Workaround bug in setuptools https://github.com/astral-sh/uv/issues/9513
 
+[tool.setuptools.package-data]
+cfengine_cli = ["*.json"] # syntax-description.json
+
 [tool.pyright]
 include = ["src"]
 venvPath = "."

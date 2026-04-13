@@ -1,6 +1,6 @@
 
 bundle notavalidtype my_bundle
        ^-----------^
-Error: Bundle type must be one of (agent, common, monitor, server, edit_line, edit_xml), not 'notavalidtype' at tests/lint/005_bundle_type.x.cf:1:8
+Error: Bundle type must be one of (agent, common, edit_line, edit_xml, monitor, server), not 'notavalidtype' at tests/lint/005_bundle_type.x.cf:1:8
 FAIL: tests/lint/005_bundle_type.x.cf (1 error)
 Failure, 1 error in total.
