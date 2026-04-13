@@ -51,10 +51,10 @@ jobs:
       - name: Update contents of syntax-description
         run: |
           if ! cmp -s new.json ./src/cfengine_cli/syntax-description.json; then
-                      cat new.json > ./src/cfengine_cli/syntax-description.json
-                      echo "CHANGES_DETECTED=true" >> $GITHUB_ENV
-                      rm new.json
-                    fi
+            cat new.json > ./src/cfengine_cli/syntax-description.json
+            echo "CHANGES_DETECTED=true" >> $GITHUB_ENV
+            rm new.json
+          fi
       - name: Create Pull Request
         if: env.CHANGES_DETECTED ==  'true'
         uses: cfengine/create-pull-request@v6
