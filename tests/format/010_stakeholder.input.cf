@@ -82,3 +82,17 @@ comment => "foo";
 "promise",
 };
 }
+
+bundle agent yoda
+{
+  reports: "hi" -> { "yoda", "boba", };
+}
+
+bundle agent yoda_two
+{
+  reports:
+    "hi" -> {
+      "yoda", # this is yoda of course
+      "boba" # and yet another star wars character
+    };
+}

@@ -63,4 +63,30 @@ concat("two", "three", "four", "five", "six", "seven", "eight", "nine", ""),
 "one",
 concat("two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"),
 );
+
+  "variable_name"
+    string => concat(
+      "one",
+      "two",
+      "three",
+      concat("two", "three", "four", "five", "six", "seven", "eight",),
+    );
+
+  "variable_name"
+    string => concat(
+      "one",
+      "two",
+      "three",
+      concat("two", "three", "four", "five", "six", "seven", "eight")
+    );
+
+  "variable_name"
+    string => concat(
+      "one",
+      "two",
+      "three",
+      # comment a
+      concat("two", "three", "four", "five", "six", "seven", "eight",)
+      # comment b
+    );
 }
