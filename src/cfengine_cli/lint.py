@@ -537,7 +537,7 @@ def _lint_node(node: Node, policy_file: PolicyFile, state: State) -> int:
     ):
         _highlight_range(node, lines)
         print(
-            f"Error: {"Bundle" if "bundle" in node.type else "Body"} '{_text(node)}' conflicts with built-in function with the same name {location}"
+            f"Error: {'Bundle' if 'bundle' in node.type else 'Body'} '{_text(node)}' conflicts with built-in function with the same name {location}"
         )
         return 1
     if node.type == "calling_identifier":
