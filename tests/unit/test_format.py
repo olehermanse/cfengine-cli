@@ -607,11 +607,6 @@ def test_can_single_line_promise_multi_attr():
     assert can_single_line_promise(promise, 4, 80) is False
 
 
-def test_can_single_line_promise_not_a_promise():
-    node = _leaf("attribute", "x")
-    assert can_single_line_promise(node, 4, 80) is False
-
-
 def test_can_single_line_promise_with_stakeholder_and_attr():
     root = _parse('bundle agent x { packages: "p" -> { "a" } comment => "c"; }')
     promise = _find(root, "promise")

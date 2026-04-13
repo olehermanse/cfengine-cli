@@ -344,12 +344,14 @@ def _promiser_line_with_stakeholder(children: list[Node]) -> str | None:
 def _stakeholder_needs_splitting(
     children: list[Node], indent: int, line_length: int
 ) -> bool:
-    """Check if the stakeholder list must be split (comments or too long)."""
+    """Check if the stakeholder list must be split (comments or too long).
+
+    This function is only used on promises without attributes, since
+    promises with both attributes and stakeholder are always split."""
     if _stakeholder_has_comments(children):
         return True
     line = _promiser_line_with_stakeholder(children)
-    if not line:
-        return False
+    assert line
     return indent + len(line) > line_length
 
 
@@ -408,26 +410,48 @@ def can_single_line_promise(node: Node, indent: int, line_length: int) -> bool:
     Returns False for multi-attribute promises, promises with a
     half_promise continuation, or stakeholder+attribute combinations.
     """
-    if node.type != "promise":
-        return False
+    assert node.type == "promise"
     children = node.children
     attrs = [c for c in children if c.type == "attribute"]
     next_sib = node.next_named_sibling
-    if len(attrs) > 1 or (next_sib and next_sib.type == "half_promise"):
+    if len(attrs) > 1:
+        # We always want to multiline a promise with multiple attributes
+        # even if it would fit on one line, i.e this should be split:
+        # "foo" string => "bar", comment => "baz";
+        return False
+    if next_sib and next_sib.type == "half_promise":
+        # When the parser encounters promises which are split up
+        # by macros, these are stored as "half" promises.
+        # In such cases, we do not want to single line them.
         return False
     if _has_stakeholder(children) and attrs:
+        # If a promise has both stakeholder and attribute(s) we want to
+        # multiline it, i.e. this should be split:
+        # "foo" -> { "bar" } string => "baz";
         return False
     if _has_stakeholder(children) and _stakeholder_needs_splitting(
         children, indent, line_length
     ):
+        # A promise with a stakeholder and no attributes might be split
+        # if the stakeholders are too long or include comments. i.e split this:
+        # "foo" -> { "bar", "too long", "stakeholders", "list", "in here", "now" };
+        assert not attrs  # Should have already returned in if above
         return False
+
+    # A candidate for single line - promise with either only stakeholder(s)
+    # or only one attribute. All that's left is to construct the full line
+    # to see how long it is. Examples:
+    # "foo" -> { "this", "fits" };
+    # "foo" string => "This also fits";
     line = _promiser_line_with_stakeholder(children)
-    if not line:
-        return False
+    assert line
     if attrs:
+        assert len(attrs) == 1
         line += " " + stringify_single_line_node(attrs[0]) + ";"
     else:
         line += ";"
+
+    # This is kind of the "main" / obvious check - does it fit on one line:
     return indent + len(line) <= line_length
 
 
