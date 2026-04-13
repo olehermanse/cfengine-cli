@@ -550,6 +550,42 @@ def _lint_node(
             f"Error: {'Bundle' if 'bundle' in node.type else 'Body'} '{_text(node)}' conflicts with built-in function with the same name {location}"
         )
         return 1
+    if state.promise_type == "vars" and node.type == "promise":
+        attribute_nodes = [x for x in node.children if x.type == "attribute"]
+        if not attribute_nodes:
+            _highlight_range(node, lines)
+            print(
+                f"Error: Missing attribute value for promiser "
+                f"{_text(node)[:-1]} inside vars-promise type {location}"
+            )
+            return 1
+
+        mutually_excl_vars_attrs = {
+            "data",
+            "ilist",
+            "int",
+            "real",
+            "rlist",
+            "slist",
+            "string",
+        }
+
+        promise_type_attrs = {
+            _text(child): attr_node
+            for attr_node in attribute_nodes
+            for child in attr_node.children
+            if child.type == "attribute_name"
+            and _text(child) in mutually_excl_vars_attrs
+        }
+
+        if len(promise_type_attrs) > 1:
+            for n in promise_type_attrs:
+                _highlight_range(promise_type_attrs[n], lines)
+            print(
+                f"Error: Mutually exclusive attribute values {tuple(promise_type_attrs)} for a single promiser"
+                f" inside vars-promise {location}"
+            )
+            return 1
     if node.type == "calling_identifier":
         name = _text(node)
         qualified_name = _qualify(name, state.namespace)
