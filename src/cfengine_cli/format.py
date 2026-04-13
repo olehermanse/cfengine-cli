@@ -29,19 +29,25 @@ PROMISER_PARTS = {"promiser", "->", "stakeholder"}
 
 
 def format_json_file(filename: str, check: bool) -> int:
-    """Reformat a JSON file in place using cfbs pretty-printer."""
+    """Reformat a JSON file in place using cfbs pretty-printer.
+
+    Returns 0 in case of successful reformat or no reformat needed.
+    Returns 1 when check is True and reformat is needed.
+    """
     assert filename.endswith(".json")
 
     if check:
-        r = not pretty_check_file(filename)
-        if r:
+        success = pretty_check_file(filename)
+        # pretty_check_file() in cfbs needs correct typehint:
+        assert type(success) is bool
+        if not success:
             print(f"JSON file '{filename}' needs reformatting")
-        return int(r)
+        return int(not success)
 
-    r = pretty_file(filename)
-    if r:
+    reformatted = pretty_file(filename)
+    if reformatted:
         print(f"JSON file '{filename}' was reformatted")
-    return int(r)
+    return 0  # Successfully reformatted or no reformat needed
 
 
 def text(node: Node) -> str:
@@ -655,7 +661,10 @@ def autoformat(
 
 
 def format_policy_file(filename: str, line_length: int, check: bool) -> int:
-    """Format a .cf policy file in place, writing only if content changed."""
+    """Format a .cf policy file in place, writing only if content changed.
+
+    Returns 0 in case of successful reformat or no reformat needed.
+    Returns 1 when check is True and reformat is needed."""
     assert filename.endswith(".cf")
 
     PY_LANGUAGE = Language(tscfengine.language())
