@@ -21,9 +21,9 @@ jobs:
   check:
     runs-on: ubuntu-24.04
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
@@ -36,9 +36,15 @@ jobs:
           python -m pip install uv
           sudo apt-get install npm
           npm install --global prettier
+      - name: Set python version file for uv
+        run: |
+          echo "${{ matrix.python-version }}" > .python-version
       - name: Run make check
         run: |
           make check
+      - name: Reset python version file
+        run: |
+          git restore .python-version
       - name: See if there are changes
         run: |
           git diff --exit-code
