@@ -3258,13 +3258,7 @@
       "status": "normal"
     },
     "common": {
-      "promiseTypes": [
-        "classes",
-        "defaults",
-        "meta",
-        "reports",
-        "vars"
-      ],
+      "promiseTypes": ["classes", "defaults", "meta", "reports", "vars"],
       "status": "normal"
     },
     "edit_line": {
