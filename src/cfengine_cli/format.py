@@ -312,12 +312,22 @@ def _stakeholder_has_comments(children: list[Node]) -> bool:
 
 
 def _has_trailing_comma(middle: list[Node]) -> bool:
-    """Check if a list's middle nodes end with a trailing comma."""
+    """Check if a list's middle nodes end with a trailing comma.
+
+    middle (the parameter name) refers to the middle of a list of nodes,
+    since the list started and ended with parentheses / curly braces.
+    Those "ends" have been removed, leaving the middle.
+
+    For example:
+    nodes = ["{", "a", ",", "b", "}"]
+    middle = nodes[1:-1]
+    """
     for node in reversed(middle):
+        if node.type == "comment":
+            continue  # Skip comments
         if node.type == ",":
-            return True
-        if node.type != "comment":
-            return False
+            return True  # Found comma, list has trailing comma
+        return False  # Found something else, list does not have trailing comma
     return False
 
 
