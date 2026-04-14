@@ -50,7 +50,7 @@ def deploy() -> int:
     return r
 
 
-def _format_filename(filename, line_length, check):
+def _format_filename(filename: str, line_length: int, check: bool) -> int:
     if filename.startswith("./."):
         return 0
     if filename.endswith(".json"):
@@ -60,7 +60,7 @@ def _format_filename(filename, line_length, check):
     raise UserError(f"Unrecognized file format: {filename}")
 
 
-def _format_dirname(directory, line_length, check):
+def _format_dirname(directory: str, line_length: int, check: bool) -> int:
     ret = 0
     for filename in find(directory, extension=".json"):
         ret |= _format_filename(filename, line_length, check)
