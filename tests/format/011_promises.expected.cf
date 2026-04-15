@@ -1,22 +1,17 @@
 # All software in this repository except where explicitly marked otherwise is
 # under the following license.
-
 ################################################################################
 # MIT Public License
 # http://www.opensource.org/licenses/MIT
-
 # Copyright 2024 Northern.tech AS
-
 # Permission is hereby granted, free of charge, to any person obtaining a copy of
 # this software and associated documentation files (the "Software"), to deal in
 # the Software without restriction, including without limitation the rights to
 # use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
 # the Software, and to permit persons to whom the Software is furnished to do so,
 # subject to the following conditions:
-
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
 # FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
@@ -24,126 +19,109 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ################################################################################
-
 ################################################################################
 # If you find CFEngine useful, please consider purchasing a commercial version
 # of the software.
 ################################################################################
-
 ################################################################################
 #
 #   promises.cf - Basic Policy for CFEngine
 #
 ################################################################################
-
 body common control
 # @brief Control options common to all agents
 {
-
-      bundlesequence => {
-                          # Common bundle first (Best Practice)
-                          inventory_control,
-                          @(inventory.bundles),
-                          def,
-                          @(cfengine_enterprise_hub_ha.classification_bundles),
-
-                          # Custom classification
-                          @(def.bundlesequence_classification),
-
-                          # autorun system
-                          services_autorun,
-                          @(services_autorun.bundles),
-
-                          # Agent bundle
-                          cfe_internal_management,   # See cfe_internal/CFE_cfengine.cf
-                          mpf_main,
-                          @(cfengine_enterprise_hub_ha.management_bundles),
-                          @(def.bundlesequence_end),
-
-      };
-
-      inputs => {
-                  # User policy init, for example for defining custom promise types:
-                  "services/init.cf",
-
-                  # File definition for global variables and classes
-                  @(cfengine_controls.def_inputs),
-
-                  # Inventory policy
-                  @(inventory.inputs),
-
-                  # CFEngine internal policy for the management of CFEngine itself
-                  @(cfe_internal_inputs.inputs),
-
-                  # Control body for all CFEngine robot agents
-                  @(cfengine_controls.inputs),
-
-                  # COPBL/Custom libraries.  Eventually this should use wildcards.
-                  @(cfengine_stdlib.inputs),
-
-                  # autorun system
-                  @(services_autorun.inputs),
-
-                  "services/main.cf",
-      };
-
-      version => "CFEngine Promises.cf 3.27.0";
-
-      # From 3.7 onwards there is a new package promise implementation using package
-      # modules in which you MUST provide package modules used to generate
-      # software inventory reports. You can also provide global default package module
-      # instead of specifying it in all package promises.
-    (debian).!disable_inventory_package_refresh::
-          package_inventory => { $(package_module_knowledge.platform_default), @(default:package_module_knowledge.additional_inventory) };
-
-      # We only define package_inventory on redhat like systems that have a
-      # python version that works with the package module.
-    (redhat|centos|suse|sles|opensuse|amazon_linux).cfe_python_for_package_modules_supported.!disable_inventory_package_refresh::
-        package_inventory => { $(package_module_knowledge.platform_default), @(default:package_module_knowledge.additional_inventory)};
-
-    aix.!disable_inventory_package_refresh::
-      package_inventory => { $(package_module_knowledge.platform_default), @(default:package_module_knowledge.additional_inventory) };
-
-    freebsd.!disable_inventory_package_refresh::
-          package_inventory => { $(package_module_knowledge.platform_default), @(default:package_module_knowledge.additional_inventory) };
-
-    aix::
-      package_module => $(package_module_knowledge.platform_default);
-
-
-    (debian|redhat|suse|sles|opensuse|amazon_linux|freebsd)::
-          package_module => $(package_module_knowledge.platform_default);
-
-    windows::
-          package_inventory => { $(package_module_knowledge.platform_default), @(default:package_module_knowledge.additional_inventory) };
-          package_module => $(package_module_knowledge.platform_default);
-
-    termux::
-          package_module => $(package_module_knowledge.platform_default);
-
-    alpinelinux::
-          package_module => $(package_module_knowledge.platform_default);
-
-
-    any::
-        ignore_missing_bundles => "$(def.control_common_ignore_missing_bundles)";
-        ignore_missing_inputs => "$(def.control_common_ignore_missing_inputs)";
-
-
-      # The number of minutes after which last-seen entries are purged from cf_lastseen.lmdb
-        lastseenexpireafter => "$(def.control_common_lastseenexpireafter)";
-
-    control_common_tls_min_version_defined::
-        tls_min_version => "$(default:def.control_common_tls_min_version)"; # See also: allowtlsversion in body server control
-
-    control_common_tls_ciphers_defined::
-        tls_ciphers => "$(default:def.control_common_tls_ciphers)"; # See also: allowciphers in body server control
-
-    control_common_system_log_level_defined::
-        system_log_level => "$(default:def.control_common_system_log_level)";
-
-    control_common_protocol_version_defined::
-      protocol_version => "$(default:def.control_common_protocol_version)";
+  bundlesequence => {
+    # Common bundle first (Best Practice)
+    inventory_control,
+    @(inventory.bundles),
+    def,
+    @(cfengine_enterprise_hub_ha.classification_bundles),
+    # Custom classification
+    @(def.bundlesequence_classification),
+    # autorun system
+    services_autorun,
+    @(services_autorun.bundles),
+    # Agent bundle
+    cfe_internal_management,
+    # See cfe_internal/CFE_cfengine.cf
+    mpf_main,
+    @(cfengine_enterprise_hub_ha.management_bundles),
+    @(def.bundlesequence_end),
+  };
+  inputs => {
+    # User policy init, for example for defining custom promise types:
+    "services/init.cf",
+    # File definition for global variables and classes
+    @(cfengine_controls.def_inputs),
+    # Inventory policy
+    @(inventory.inputs),
+    # CFEngine internal policy for the management of CFEngine itself
+    @(cfe_internal_inputs.inputs),
+    # Control body for all CFEngine robot agents
+    @(cfengine_controls.inputs),
+    # COPBL/Custom libraries.  Eventually this should use wildcards.
+    @(cfengine_stdlib.inputs),
+    # autorun system
+    @(services_autorun.inputs),
+    "services/main.cf",
+  };
+  version => "CFEngine Promises.cf 3.27.0";
+  # From 3.7 onwards there is a new package promise implementation using package
+  # modules in which you MUST provide package modules used to generate
+  # software inventory reports. You can also provide global default package module
+  # instead of specifying it in all package promises.
+  (debian).!disable_inventory_package_refresh::
+    package_inventory => {
+      $(package_module_knowledge.platform_default),
+      @(default:package_module_knowledge.additional_inventory),
+    };
+  # We only define package_inventory on redhat like systems that have a
+  # python version that works with the package module.
+  (redhat|centos|suse|sles|opensuse|amazon_linux).cfe_python_for_package_modules_supported.!disable_inventory_package_refresh::
+    package_inventory => {
+      $(package_module_knowledge.platform_default),
+      @(default:package_module_knowledge.additional_inventory),
+    };
+  aix.!disable_inventory_package_refresh::
+    package_inventory => {
+      $(package_module_knowledge.platform_default),
+      @(default:package_module_knowledge.additional_inventory),
+    };
+  freebsd.!disable_inventory_package_refresh::
+    package_inventory => {
+      $(package_module_knowledge.platform_default),
+      @(default:package_module_knowledge.additional_inventory),
+    };
+  aix::
+    package_module => $(package_module_knowledge.platform_default);
+  (debian|redhat|suse|sles|opensuse|amazon_linux|freebsd)::
+    package_module => $(package_module_knowledge.platform_default);
+  windows::
+    package_inventory => {
+      $(package_module_knowledge.platform_default),
+      @(default:package_module_knowledge.additional_inventory),
+    };
+    package_module => $(package_module_knowledge.platform_default);
+  termux::
+    package_module => $(package_module_knowledge.platform_default);
+  alpinelinux::
+    package_module => $(package_module_knowledge.platform_default);
+  any::
+    ignore_missing_bundles => "$(def.control_common_ignore_missing_bundles)";
+    ignore_missing_inputs => "$(def.control_common_ignore_missing_inputs)";
+    # The number of minutes after which last-seen entries are purged from cf_lastseen.lmdb
+    lastseenexpireafter => "$(def.control_common_lastseenexpireafter)";
+  control_common_tls_min_version_defined::
+    tls_min_version => "$(default:def.control_common_tls_min_version)";
+  # See also: allowtlsversion in body server control
+  control_common_tls_ciphers_defined::
+    tls_ciphers => "$(default:def.control_common_tls_ciphers)";
+  # See also: allowciphers in body server control
+  control_common_system_log_level_defined::
+    system_log_level => "$(default:def.control_common_system_log_level)";
+  control_common_protocol_version_defined::
+    protocol_version => "$(default:def.control_common_protocol_version)";
 }
 
 bundle common inventory
@@ -155,52 +133,182 @@ bundle common inventory
 # else in promises.cf
 {
   classes:
-      "other_unix_os" expression => "!(windows|macos|linux|freebsd|aix)";
-      "specific_linux_os" expression => "redhat|debian|suse|sles";
+    "other_unix_os" expression => "!(windows|macos|linux|freebsd|aix)";
+    "specific_linux_os" expression => "redhat|debian|suse|sles";
 
   vars:
-      # This list is intended to grow as needed
+    # This list is intended to grow as needed
     debian::
-      "inputs" slist => { "inventory/any.cf", "inventory/linux.cf", "inventory/lsb.cf", "inventory/debian.cf", "inventory/os.cf" };
-      "bundles" slist => { "inventory_control", "inventory_any", "inventory_autorun", "inventory_linux", "inventory_lsb", "inventory_debian", "inventory_os" };
+      "inputs"
+        slist => {
+          "inventory/any.cf",
+          "inventory/linux.cf",
+          "inventory/lsb.cf",
+          "inventory/debian.cf",
+          "inventory/os.cf",
+        };
+
+      "bundles"
+        slist => {
+          "inventory_control",
+          "inventory_any",
+          "inventory_autorun",
+          "inventory_linux",
+          "inventory_lsb",
+          "inventory_debian",
+          "inventory_os",
+        };
+
     redhat::
-      "inputs" slist => { "inventory/any.cf", "inventory/linux.cf", "inventory/lsb.cf", "inventory/redhat.cf", "inventory/os.cf" };
-      "bundles" slist => { "inventory_control", "inventory_any", "inventory_autorun", "inventory_linux", "inventory_lsb", "inventory_redhat", "inventory_os" };
+      "inputs"
+        slist => {
+          "inventory/any.cf",
+          "inventory/linux.cf",
+          "inventory/lsb.cf",
+          "inventory/redhat.cf",
+          "inventory/os.cf",
+        };
+
+      "bundles"
+        slist => {
+          "inventory_control",
+          "inventory_any",
+          "inventory_autorun",
+          "inventory_linux",
+          "inventory_lsb",
+          "inventory_redhat",
+          "inventory_os",
+        };
+
     suse|sles::
-      "inputs" slist => { "inventory/any.cf", "inventory/linux.cf", "inventory/lsb.cf", "inventory/suse.cf", "inventory/os.cf" };
-      "bundles" slist => { "inventory_control", "inventory_any", "inventory_autorun", "inventory_linux", "inventory_lsb", "inventory_suse", "inventory_os" };
+      "inputs"
+        slist => {
+          "inventory/any.cf",
+          "inventory/linux.cf",
+          "inventory/lsb.cf",
+          "inventory/suse.cf",
+          "inventory/os.cf",
+        };
+
+      "bundles"
+        slist => {
+          "inventory_control",
+          "inventory_any",
+          "inventory_autorun",
+          "inventory_linux",
+          "inventory_lsb",
+          "inventory_suse",
+          "inventory_os",
+        };
+
     windows::
-      "inputs" slist => { "inventory/any.cf", "inventory/windows.cf", "inventory/os.cf" };
-      "bundles" slist => { "inventory_control", "inventory_any", "inventory_autorun", "inventory_windows", "inventory_os" };
+      "inputs"
+        slist => {
+          "inventory/any.cf", "inventory/windows.cf", "inventory/os.cf"
+        };
+
+      "bundles"
+        slist => {
+          "inventory_control",
+          "inventory_any",
+          "inventory_autorun",
+          "inventory_windows",
+          "inventory_os",
+        };
+
     macos::
-      "inputs" slist => { "inventory/any.cf", "inventory/macos.cf", "inventory/os.cf" };
-      "bundles" slist => { "inventory_control", "inventory_any", "inventory_autorun", "inventory_macos", "inventory_os" };
+      "inputs"
+        slist => {
+          "inventory/any.cf", "inventory/macos.cf", "inventory/os.cf"
+        };
+
+      "bundles"
+        slist => {
+          "inventory_control",
+          "inventory_any",
+          "inventory_autorun",
+          "inventory_macos",
+          "inventory_os",
+        };
+
     freebsd::
-      "inputs" slist => { "inventory/any.cf", "inventory/freebsd.cf", "inventory/os.cf" };
-      "bundles" slist => { "inventory_control", "inventory_any", "inventory_autorun", "inventory_freebsd", "inventory_os" };
+      "inputs"
+        slist => {
+          "inventory/any.cf", "inventory/freebsd.cf", "inventory/os.cf"
+        };
+
+      "bundles"
+        slist => {
+          "inventory_control",
+          "inventory_any",
+          "inventory_autorun",
+          "inventory_freebsd",
+          "inventory_os",
+        };
+
     linux.!specific_linux_os::
-      "inputs" slist => { "inventory/any.cf", "inventory/linux.cf", "inventory/lsb.cf", "inventory/os.cf" };
-      "bundles" slist => { "inventory_control", "inventory_any", "inventory_autorun", "inventory_linux", "inventory_lsb", "inventory_os" };
+      "inputs"
+        slist => {
+          "inventory/any.cf",
+          "inventory/linux.cf",
+          "inventory/lsb.cf",
+          "inventory/os.cf",
+        };
+
+      "bundles"
+        slist => {
+          "inventory_control",
+          "inventory_any",
+          "inventory_autorun",
+          "inventory_linux",
+          "inventory_lsb",
+          "inventory_os",
+        };
+
     aix::
-      "inputs" slist => { "inventory/any.cf", "inventory/generic.cf", "inventory/aix.cf", "inventory/os.cf" };
-      "bundles" slist => { "inventory_control", "inventory_any", "inventory_autorun", "inventory_generic", "inventory_aix", "inventory_os" };
+      "inputs"
+        slist => {
+          "inventory/any.cf",
+          "inventory/generic.cf",
+          "inventory/aix.cf",
+          "inventory/os.cf",
+        };
+
+      "bundles"
+        slist => {
+          "inventory_control",
+          "inventory_any",
+          "inventory_autorun",
+          "inventory_generic",
+          "inventory_aix",
+          "inventory_os",
+        };
+
     other_unix_os::
-      "inputs" slist => { "inventory/any.cf", "inventory/generic.cf", "inventory/os.cf" };
-      "bundles" slist => { "inventory_control", "inventory_any", "inventory_autorun", "inventory_generic", "inventory_os" };
+      "inputs"
+        slist => {
+          "inventory/any.cf", "inventory/generic.cf", "inventory/os.cf"
+        };
+
+      "bundles"
+        slist => {
+          "inventory_control",
+          "inventory_any",
+          "inventory_autorun",
+          "inventory_generic",
+          "inventory_os",
+        };
 
   reports:
     verbose_mode::
       "$(this.bundle): loading inventory module '$(inputs)'";
 }
 
-      #
-
 bundle common cfe_internal_inputs
 # @brief Include internal self management policies
 {
   vars:
     any::
-
       "input[cfe_internal_management]"
         string => "cfe_internal/CFE_cfengine.cf",
         comment => "This policy activates internal management policies
@@ -231,20 +339,16 @@ bundle common cfe_internal_inputs
                     cf-execd is always running.";
 
     enterprise_edition.(policy_server|am_policy_hub)::
-
       "input[enterprise_hub_specific]"
         string => "cfe_internal/enterprise/CFE_hub_specific.cf",
         comment => "Policy relating to CFEngine Enterprise Hub, for example
                     software updates, webserver configuration, and alerts";
-
 @if minimum_version(3.12.0)
       "input[enterprise_hub_federation]"
         string => "cfe_internal/enterprise/federation/federation.cf",
         comment => "Policy relating to CFEngine Federated Reporting";
 @endif
-
     enterprise_edition::
-
       "input[enterprise_knowledge]"
         string => "cfe_internal/enterprise/CFE_knowledge.cf",
         comment => "Settings mostly releated to CFEngine Enteprise Mission Portal";
@@ -269,28 +373,30 @@ bundle common cfengine_stdlib
 # @brief Include the standard library
 {
   vars:
-
     any::
       "inputs" slist => { "$(sys.local_libdir)/stdlib.cf" };
 
-
-      # As part of ENT-2719 3.12.2 introduced package_method attributes for
-      # specifying the interpreter and specifying the module path. These
-      # attributes are not known in previous versions and must not be seen by
-      # the parser or they will be seen as syntax errors. A cleaner way to do
-      # this using the minimum_version macro is possible, but that would break
-      # masterfiles compatibility in 3.12 with 3.7 binaries since 3.7 binaries
-      # do not support major.minor.patch with minimum_version, only major.minor.
-
+    # As part of ENT-2719 3.12.2 introduced package_method attributes for
+    # specifying the interpreter and specifying the module path. These
+    # attributes are not known in previous versions and must not be seen by
+    # the parser or they will be seen as syntax errors. A cleaner way to do
+    # this using the minimum_version macro is possible, but that would break
+    # masterfiles compatibility in 3.12 with 3.7 binaries since 3.7 binaries
+    # do not support major.minor.patch with minimum_version, only major.minor.
     windows.cfengine_3_12.!(cfengine_3_12_0|cfengine_3_12_1)::
-      "inputs" slist => { "$(sys.local_libdir)/stdlib.cf",
-                          "$(sys.local_libdir)/packages-ENT-3719.cf" };
+      "inputs"
+        slist => {
+          "$(sys.local_libdir)/stdlib.cf",
+          "$(sys.local_libdir)/packages-ENT-3719.cf",
+        };
 @if minimum_version(3.14)
     windows::
-      "inputs" slist => { "$(sys.local_libdir)/stdlib.cf",
-                          "$(sys.local_libdir)/packages-ENT-3719.cf" };
+      "inputs"
+        slist => {
+          "$(sys.local_libdir)/stdlib.cf",
+          "$(sys.local_libdir)/packages-ENT-3719.cf",
+        };
 @endif
-
   reports:
     verbose_mode::
       "$(this.bundle): defining inputs='$(inputs)'";
@@ -300,37 +406,31 @@ bundle common cfengine_controls
 # @brief Include various agent control policies
 {
   vars:
+    "def_inputs"
+      slist => { "controls/def.cf", "controls/def_inputs.cf" },
+      comment => "We strictly order the def inputs because they should be parsed first";
 
-      "def_inputs"
-        slist => {
-                   "controls/def.cf",
-                   "controls/def_inputs.cf",
-                 },
-        comment => "We strictly order the def inputs because they should be parsed first";
+    "input[cf_agent]"
+      string => "controls/cf_agent.cf",
+      comment => "Agent control options";
 
+    "input[cf_execd]"
+      string => "controls/cf_execd.cf",
+      comment => "Executor (scheduler) control options";
 
-      "input[cf_agent]"
-        string => "controls/cf_agent.cf",
-        comment => "Agent control options";
+    "input[cf_monitord]"
+      string => "controls/cf_monitord.cf",
+      comment => "Monitor/Measurement control options";
 
-      "input[cf_execd]"
-        string => "controls/cf_execd.cf",
-        comment => "Executor (scheduler) control options";
+    "input[cf_serverd]"
+      string => "controls/cf_serverd.cf",
+      comment => "Server control options";
 
-      "input[cf_monitord]"
-        string => "controls/cf_monitord.cf",
-        comment => "Monitor/Measurement control options";
-
-      "input[cf_serverd]"
-        string => "controls/cf_serverd.cf",
-        comment => "Server control options";
-
-      "input[cf_runagent]"
-        string => "controls/cf_runagent.cf",
-        comment => "Runagent (remote activation request) control options";
+    "input[cf_runagent]"
+      string => "controls/cf_runagent.cf",
+      comment => "Runagent (remote activation request) control options";
 
     enterprise_edition::
-
       "input[cf_hub]" -> { "CFEngine Enterprise" }
         string => "controls/cf_hub.cf",
         comment => "Hub (agent report collection) control options";
@@ -340,13 +440,12 @@ bundle common cfengine_controls
         comment => "Report collection options";
 
     any::
-
       "inputs" slist => getvalues(input);
 
   reports:
     DEBUG|DEBUG_cfengine_controls::
       "DEBUG $(this.bundle)";
-        "$(const.t)defining inputs='$(inputs)'";
+      "$(const.t)defining inputs='$(inputs)'";
 }
 
 bundle common services_autorun
@@ -359,38 +458,46 @@ bundle common services_autorun
     services_autorun|services_autorun_inputs::
       "_default_autorun_input_dir"
         string => "$(this.promise_dirname)/services/autorun";
+
       "_default_autorun_inputs"
-        slist => sort( lsdir( "$(_default_autorun_input_dir)", ".*\.cf", "true"), lex);
+        slist => sort(
+          lsdir("$(_default_autorun_input_dir)", ".*\.cf", "true"), lex
+        );
 
       "_extra_autorun_input_dirs"
         slist => { @(def.mpf_extra_autorun_inputs) },
-        if => isvariable( "def.mpf_extra_autorun_inputs" );
+        if => isvariable("def.mpf_extra_autorun_inputs");
 
       "_extra_autorun_inputs[$(_extra_autorun_input_dirs)]"
-        slist => sort( lsdir("$(_extra_autorun_input_dirs)/.", ".*\.cf", "true"), lex),
-        if => isdir( $(_extra_autorun_input_dirs) );
+        slist => sort(
+          lsdir("$(_extra_autorun_input_dirs)/.", ".*\.cf", "true"), lex
+        ),
+        if => isdir($(_extra_autorun_input_dirs));
 
-      "found_inputs" slist => { @(_default_autorun_inputs),
-                                sort( getvalues(_extra_autorun_inputs), "lex") };
+      "found_inputs"
+        slist => {
+          @(_default_autorun_inputs),
+          sort(getvalues(_extra_autorun_inputs), "lex"),
+        };
 
     !(services_autorun|services_autorun_inputs|services_autorun_bundles)::
       # If services_autorun is not enabled, then we should not extend inputs
       # automatically.
-      "inputs" slist => { };
-      "found_inputs" slist => {};
-      "bundles" slist => { "services_autorun" }; # run self
+      "inputs" slist => {  };
+      "found_inputs" slist => {  };
+      "bundles" slist => { "services_autorun" };
 
+    # run self
     services_autorun|services_autorun_inputs|services_autorun_bundles::
       "inputs" slist => { "$(sys.local_libdir)/autorun.cf" };
-      "bundles" slist => { "autorun" }; # run loaded bundles
-
+      "bundles" slist => { "autorun" };
+  # run loaded bundles
   reports:
     DEBUG|DEBUG_services_autorun::
       "DEBUG $(this.bundle): Services Autorun Disabled"
         if => "!(services_autorun|services_autorun_bundles|services_autorun_inputs)";
 
-      "DEBUG $(this.bundle): Services Autorun Enabled"
-        if => "services_autorun";
+      "DEBUG $(this.bundle): Services Autorun Enabled" if => "services_autorun";
 
       "DEBUG $(this.bundle): Services Autorun Bundles Enabled"
         if => "services_autorun_bundles";
