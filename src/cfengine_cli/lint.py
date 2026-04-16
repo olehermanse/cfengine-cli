@@ -645,6 +645,21 @@ def _lint_node(
                 f"Error: Invalid attribute '{state.attribute_name}' for promise type '{state.promise_type}' {location}"
             )
             return 1
+    if (
+        state.block_keyword == "promise"
+        and node.type == "attribute_name"
+        and state.attribute_name
+        not in (
+            None,
+            "path",
+            "interpreter",
+        )
+    ):
+        _highlight_range(node, lines)
+        print(
+            f"Error: Invalid attribute name '{state.attribute_name}' in '{state.block_name}' custom promise type definition {location}"
+        )
+        return 1
     return 0
 
 
