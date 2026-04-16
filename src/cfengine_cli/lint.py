@@ -660,6 +660,21 @@ def _lint_node(
             f"Error: Invalid attribute name '{state.attribute_name}' in '{state.block_name}' custom promise type definition {location}"
         )
         return 1
+    if node.type == "call":
+        call, _, *args, _ = node.children  # f ( a1 , a2 , a..N )
+        call = _text(call)
+        args = list(filter(",".__ne__, iter(_text(x) for x in args)))
+
+        if call in syntax_data.BUILTIN_FUNCTIONS:
+            variadic = syntax_data.BUILTIN_FUNCTIONS.get(call, {}).get("variadic", True)
+            params = syntax_data.BUILTIN_FUNCTIONS.get(call, {}).get("parameters", {})
+            if not variadic and (len(params) != len(args)):
+                _highlight_range(node, lines)
+                print(
+                    f"Error: Expected {len(params)} arguments, received {len(args)} {location}"
+                )
+                return 1
+            # TODO: Handle variadic functions with varying number of required arguments (0-N, 1-N, 2-N and so on)
     return 0
 
 
