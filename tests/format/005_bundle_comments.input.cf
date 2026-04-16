@@ -45,3 +45,8 @@ bundle agent f(
   reports:
     "Hello, world!";
 }
+#
+bundle agent g
+{
+  # comment
+}

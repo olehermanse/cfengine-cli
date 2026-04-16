@@ -47,3 +47,8 @@ bundle agent f(s, d, o, p)
   reports:
     "Hello, world!";
 }
+
+bundle agent g
+{
+  # comment
+}

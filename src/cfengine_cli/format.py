@@ -25,6 +25,8 @@ CLASS_GUARD_TYPES = {
 
 BLOCK_TYPES = {"bundle_block", "promise_block", "body_block"}
 
+BLOCK_BODY_TYPES = {"bundle_block_body", "promise_block_body", "body_block_body"}
+
 PROMISER_PARTS = {"promiser", "->", "stakeholder"}
 
 
@@ -559,6 +561,9 @@ def _format_block_header(node: Node, fmt: Formatter) -> list[Node]:
     line = " ".join(header_parts)
     if not fmt.empty:
         prev_sib = node.prev_named_sibling
+        # Skip over preceding empty comments since they will be removed
+        while prev_sib and prev_sib.type == "comment" and _is_empty_comment(prev_sib):
+            prev_sib = prev_sib.prev_named_sibling
         if not (prev_sib and prev_sib.type == "comment"):
             fmt.blank_line()
     fmt.print(line, 0)
@@ -642,6 +647,10 @@ def _comment_indent(node: Node, indent: int) -> int:
     if nearest is None:
         nearest = _skip_comments(node.prev_named_sibling, "prev")
     if nearest and nearest.type in INDENTED_TYPES:
+        return indent + 2
+    # No indented sibling found — if we're directly inside a block body,
+    # indent so the comment lines up with where promises/attributes would.
+    if nearest is None and node.parent and node.parent.type in BLOCK_BODY_TYPES:
         return indent + 2
     return indent
 
