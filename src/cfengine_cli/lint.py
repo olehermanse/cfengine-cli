@@ -634,6 +634,17 @@ def _lint_node(
                 f"Error: '{name}' is not a defined body. Only bodies may be called with '{state.attribute_name}' {location}"
             )
             return 1
+    if node.type == "attribute_name" and state.promise_type and state.attribute_name:
+        promise_type_data = syntax_data.BUILTIN_PROMISE_TYPES.get(
+            state.promise_type, {}
+        )
+        promise_type_attrs = promise_type_data.get("attributes", {})
+        if state.attribute_name not in promise_type_attrs:
+            _highlight_range(node, lines)
+            print(
+                f"Error: Invalid attribute '{state.attribute_name}' for promise type '{state.promise_type}' {location}"
+            )
+            return 1
     return 0
 
 
