@@ -1,0 +1,19 @@
+bundle agent foo
+{
+  vars:
+    "policy"
+      policy => "free",
+      real => "11.11";
+
+    "noerr"
+      slist => {};
+      int => "string";
+
+    "noerr"
+      slist => {}
+      int => "string";
+
+    "comment"
+      slist => {},
+      comment => "string";
+}
