@@ -1,0 +1,12 @@
+
+  path => "/var/cfengine/inputs/modules/promises/git.py";
+  blah => "something";
+  ^--^
+Error: Invalid attribute name 'blah' in 'git' custom promise type definition at tests/lint/012_invalid_attributes.x.cf:5:3
+
+      slist => {},
+      bar => "";
+      ^-^
+Error: Invalid attribute 'bar' for promise type 'vars' at tests/lint/012_invalid_attributes.x.cf:12:7
+FAIL: tests/lint/012_invalid_attributes.x.cf (2 errors)
+Failure, 2 errors in total.

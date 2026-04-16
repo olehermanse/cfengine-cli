@@ -1,0 +1,13 @@
+promise agent git
+{
+  interpreter => "/usr/bin/python3";
+  path => "/var/cfengine/inputs/modules/promises/git.py";
+  blah => "something";
+}
+bundle agent foo
+{
+  vars:
+    "error"
+      slist => {},
+      bar => "";
+}
