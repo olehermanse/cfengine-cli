@@ -6,12 +6,10 @@ bundle agent foo
       real => "11.11";
 
     "noerr"
-      slist => {};
-      int => "string";
+      int => 12;
 
     "noerr"
-      slist => {}
-      int => "string";
+      slist => {};
 
     "comment"
       slist => {},
