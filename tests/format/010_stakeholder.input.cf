@@ -1,6 +1,7 @@
 bundle agent main
 {
 packages:
+"platform-python-devel" -> { };
 "platform-python-devel" -> { "cfbs shebang", "ENT-1234" };
 "platform-python-devel" -> { "cfbs shebang", "ENT-1234" }
 comment => "foo";
