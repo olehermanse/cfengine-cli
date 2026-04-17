@@ -1,0 +1,17 @@
+
+      create => "true",
+      perms => mog("644");
+               ^--------^
+Error: Expected 3 arguments, received 1 for body 'mog' at tests/lint/014_num_args_body.x.cf:13:16
+
+      create => "true",
+      perms => mog("644", "root");
+               ^----------------^
+Error: Expected 3 arguments, received 2 for body 'mog' at tests/lint/014_num_args_body.x.cf:16:16
+
+      create => "true",
+      perms => mog("644", "root", "root", "root");
+               ^--------------------------------^
+Error: Expected 3 arguments, received 4 for body 'mog' at tests/lint/014_num_args_body.x.cf:22:16
+FAIL: tests/lint/014_num_args_body.x.cf (3 errors)
+Failure, 3 errors in total.
