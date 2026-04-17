@@ -152,9 +152,9 @@ def stringify_single_line_nodes(nodes: list[Node]) -> str:
             result += " "
         if previous and previous.type == "=>":
             result += " "
-        if previous and previous.type == "{":
+        if previous and previous.type == "{" and node.type != "}":
             result += " "
-        if previous and node.type == "}":
+        if previous and node.type == "}" and previous.type != "{":
             result += " "
         result += string
         previous = node
