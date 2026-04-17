@@ -182,7 +182,9 @@ def split_generic_value(node: Node, indent: int, line_length: int) -> list[str]:
     return [stringify_single_line_node(node)]
 
 
-def split_generic_list(middle: list[Node], indent: int, line_length: int) -> list[str]:
+def split_generic_list(
+    middle: list[Node], indent: int, line_length: int, trailing_comma: bool = True
+) -> list[str]:
     """Split list elements into one-per-line strings, each pre-indented."""
     elements: list[str] = []
     for element in middle:
@@ -196,25 +198,27 @@ def split_generic_list(middle: list[Node], indent: int, line_length: int) -> lis
             lines = split_generic_value(element, indent, line_length)
             elements.append(" " * indent + lines[0])
             elements.extend(lines[1:])
-    # Always add a trailing comma on multi-line lists, on the last
+    # Ensure trailing comma state matches the desired setting, on the last
     # non-comment element (so it doesn't end up after a trailing comment).
     for i in range(len(elements) - 1, -1, -1):
         if elements[i].lstrip().startswith("#"):
             continue
-        if not elements[i].endswith(","):
+        if trailing_comma and not elements[i].endswith(","):
             elements[i] = elements[i] + ","
+        elif not trailing_comma and elements[i].endswith(","):
+            elements[i] = elements[i][:-1]
         break
     return elements
 
 
 def maybe_split_generic_list(
-    nodes: list[Node], indent: int, line_length: int
+    nodes: list[Node], indent: int, line_length: int, trailing_comma: bool = True
 ) -> list[str]:
     """Try a single-line rendering; fall back to split_generic_list if too long."""
     string = " " * indent + stringify_single_line_nodes(nodes)
     if len(string) < line_length:
         return [string]
-    return split_generic_list(nodes, indent, line_length)
+    return split_generic_list(nodes, indent, line_length, trailing_comma)
 
 
 def split_rval_list(node: Node, indent: int, line_length: int) -> list[str]:
@@ -236,7 +240,9 @@ def split_rval_call(node: Node, indent: int, line_length: int) -> list[str]:
     first = text(node.children[0]) + "("
     last = " " * indent + text(node.children[-1])
     middle = node.children[2:-1]
-    elements = maybe_split_generic_list(middle, indent + 2, line_length)
+    elements = maybe_split_generic_list(
+        middle, indent + 2, line_length, trailing_comma=False
+    )
     return [first, *elements, last]
 
 
