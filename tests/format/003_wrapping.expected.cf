@@ -70,7 +70,7 @@ bundle agent function_calls
         "seven",
         "eight",
         "nine",
-        "ten",
+        "ten"
       );
 }
 
@@ -90,7 +90,7 @@ bundle agent nested_function_calls
     "variable_name"
       string => concat(
         "one",
-        concat("two", "three", "four", "five", "six", "seven", "eight", ""),
+        concat("two", "three", "four", "five", "six", "seven", "eight", "")
       );
 
     "variable_name"
@@ -98,7 +98,7 @@ bundle agent nested_function_calls
         "one",
         concat(
           "two", "three", "four", "five", "six", "seven", "eight", "nine", ""
-        ),
+        )
       );
 
     "variable_name"
@@ -113,8 +113,8 @@ bundle agent nested_function_calls
           "seven",
           "eight",
           "nine",
-          "ten",
-        ),
+          "ten"
+        )
       );
 
     "variable_name"
@@ -122,7 +122,7 @@ bundle agent nested_function_calls
         "one",
         "two",
         "three",
-        concat("two", "three", "four", "five", "six", "seven", "eight"),
+        concat("two", "three", "four", "five", "six", "seven", "eight")
       );
 
     "variable_name"
@@ -130,7 +130,7 @@ bundle agent nested_function_calls
         "one",
         "two",
         "three",
-        concat("two", "three", "four", "five", "six", "seven", "eight"),
+        concat("two", "three", "four", "five", "six", "seven", "eight")
       );
 
     "variable_name"
@@ -139,7 +139,7 @@ bundle agent nested_function_calls
         "two",
         "three",
         # comment a
-        concat("two", "three", "four", "five", "six", "seven", "eight"),
+        concat("two", "three", "four", "five", "six", "seven", "eight")
         # comment b
       );
 }
