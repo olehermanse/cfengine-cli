@@ -552,15 +552,8 @@ def _lint_node(
         return 1
     if state.promise_type == "vars" and node.type == "promise":
         attribute_nodes = [x for x in node.children if x.type == "attribute"]
-        if not attribute_nodes:
-            _highlight_range(node, lines)
-            print(
-                f"Error: Missing attribute value for promiser "
-                f"{_text(node)[:-1]} inside vars-promise type {location}"
-            )
-            return 1
-
-        mutually_excl_vars_attrs = {
+        # Each vars promise must include exactly 1 of these attributes (a value):
+        vars_types = {
             "data",
             "ilist",
             "int",
@@ -569,21 +562,33 @@ def _lint_node(
             "slist",
             "string",
         }
+        # Attributes are children of a promise, and attribute names are children of attributes
+        # Need to iterate inside to find the attribute name (data, ilist, int, etc.)
+        value_nodes = []
+        for attr in attribute_nodes:
+            for child in attr.children:
+                if child.type != "attribute_name":
+                    continue
+                if _text(child) in vars_types:
+                    # Ignore the other attributes which are not values
+                    value_nodes.append(child)
 
-        promise_type_attrs = {
-            _text(child): attr_node
-            for attr_node in attribute_nodes
-            for child in attr_node.children
-            if child.type == "attribute_name"
-            and _text(child) in mutually_excl_vars_attrs
-        }
-
-        if len(promise_type_attrs) > 1:
-            for n in promise_type_attrs:
-                _highlight_range(promise_type_attrs[n], lines)
+        if not value_nodes:
+            # None of vars_types were found
+            _highlight_range(node, lines)
             print(
-                f"Error: Mutually exclusive attribute values {tuple(promise_type_attrs)} for a single promiser"
-                f" inside vars-promise {location}"
+                f"Error: Missing value for vars promise {_text(node)[:-1]} {location}"
+            )
+            return 1
+
+        if len(value_nodes) > 1:
+            # Too many of vars_types was found
+            # TODO: We could improve _highlight_range to highlight multiple nodes in a nice way
+            _highlight_range(value_nodes[-1], lines)
+            nodes = ", ".join([_text(x) for x in value_nodes])
+            print(
+                f"Error: Mutually exclusive attribute values ({nodes})"
+                f" for a single promiser inside vars-promise {location}"
             )
             return 1
     if node.type == "calling_identifier":

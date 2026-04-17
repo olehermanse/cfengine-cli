@@ -9,11 +9,9 @@ bundle agent foo
 
     "noerr"
       slist => {};
-      int => "string";
 
     "noerr"
-      slist => {}
-      int => "string";
+      string => "string";
 
     "missing-error";
 }
