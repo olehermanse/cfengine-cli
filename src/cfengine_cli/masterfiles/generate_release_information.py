@@ -1,4 +1,6 @@
 import json
+import requests
+from functools import cache
 from cfengine_cli.masterfiles.download import (
     ENTERPRISE_RELEASES_URL,
     COMMUNITY_RELEASES_URL,
@@ -29,6 +31,10 @@ def generate_release_information_impl(
     omit_download=False, check=False, min_version=None
 ):
     if not omit_download:
+        generate_release_history()
+
+        generate_git_tags_map()
+
         print("Downloading masterfiles...")
 
         downloaded_versions = download_all_versions(DOWNLOAD_PATH, min_version)
@@ -48,10 +54,6 @@ def generate_release_information_impl(
         "Downloading releases of masterfiles from cfengine.com and generating release information..."
     )
     generate_vcf_download(DOWNLOAD_PATH, downloaded_versions)
-
-    generate_release_history()
-
-    generate_git_tags_map()
 
     if check:
         print(
@@ -74,37 +76,12 @@ def generate_release_information_impl(
         )
 
 
-def download_enterprise_releasedata():
-    # Downloading releases.json:
-    try:
-        releases_data = get_json(ENTERPRISE_RELEASES_URL)
-
-    except CFBSNetworkError:
-        raise CFBSExitError(
-            "Downloading CFEngine release data failed - check your Wi-Fi / network settings."
-        )
-
-    return releases_data
-
-
-def download_community_releasedata():
-    # Downloading community/releases.json
-    try:
-        releases_data = get_json(COMMUNITY_RELEASES_URL)
-
-    except CFBSNetworkError:
-        raise CFBSExitError(
-            "Downloading CFEngine release data failed - check your Wi-Fi / network settings."
-        )
-
-    return releases_data
-
-
-def process_release_type(folder, download_func):
+def process_release_type(folder, url):
     # Function for processing either community or enterprise releases
-    release_data = download_func()
-
-    write_json_pretty(f"./{folder}/releases.json", release_data)
+    releases_path = f"./{folder}/releases.json"
+    print(f"\nDownloading release data for {folder}...")
+    # Save raw file to preserve exact format from website
+    release_data = json_get_save_return(url, releases_path)
 
     stable_releases = get_stable_releases(release_data)
 
@@ -119,8 +96,8 @@ def process_release_type(folder, download_func):
 
 def generate_release_history():
     print("Generating release history information...")
-    process_release_type("cfengine-enterprise", download_enterprise_releasedata)
-    process_release_type("cfengine-community", download_community_releasedata)
+    process_release_type("cfengine-enterprise", ENTERPRISE_RELEASES_URL)
+    process_release_type("cfengine-community", COMMUNITY_RELEASES_URL)
 
 
 def build_release_history(filtered_releases):
@@ -188,7 +165,26 @@ def write_version_files(stable_releases, folder):
         write_json(f"./{folder}/versions/{version}.json", version_data)
 
 
-def write_json_pretty(path, data):
-    # Writes release information in same format as on cfengine.com
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+@cache
+def json_get_save_return(url: str, path: str) -> dict:
+    try:
+        r = requests.get(url)
+        r.raise_for_status()
+    except requests.exceptions.RequestException:
+        raise CFBSNetworkError(
+            f"Downloading of {url} failed - check your Wi-Fi / network settings."
+        )
+    content = r.content
+
+    try:
+        with open(path, "wb") as f:
+            f.write(content)
+    except OSError:
+        raise CFBSExitError(f"Failed to open and write content to {path}")
+
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError:
+        raise CFBSExitError(f"Failed to parse JSON from {url}.")
+
+    return data
