@@ -634,6 +634,47 @@ def _lint_node(
                 f"Error: '{name}' is not a defined body. Only bodies may be called with '{state.attribute_name}' {location}"
             )
             return 1
+    if node.type == "attribute_name" and state.promise_type and state.attribute_name:
+        promise_type_data = syntax_data.BUILTIN_PROMISE_TYPES.get(
+            state.promise_type, {}
+        )
+        promise_type_attrs = promise_type_data.get("attributes", {})
+        if state.attribute_name not in promise_type_attrs:
+            _highlight_range(node, lines)
+            print(
+                f"Error: Invalid attribute '{state.attribute_name}' for promise type '{state.promise_type}' {location}"
+            )
+            return 1
+    if (
+        state.block_keyword == "promise"
+        and node.type == "attribute_name"
+        and state.attribute_name
+        not in (
+            None,
+            "path",
+            "interpreter",
+        )
+    ):
+        _highlight_range(node, lines)
+        print(
+            f"Error: Invalid attribute name '{state.attribute_name}' in '{state.block_name}' custom promise type definition {location}"
+        )
+        return 1
+    if node.type == "call":
+        call, _, *args, _ = node.children  # f ( a1 , a2 , a..N )
+        call = _text(call)
+        args = list(filter(",".__ne__, iter(_text(x) for x in args)))
+
+        if call in syntax_data.BUILTIN_FUNCTIONS:
+            variadic = syntax_data.BUILTIN_FUNCTIONS.get(call, {}).get("variadic", True)
+            params = syntax_data.BUILTIN_FUNCTIONS.get(call, {}).get("parameters", {})
+            if not variadic and (len(params) != len(args)):
+                _highlight_range(node, lines)
+                print(
+                    f"Error: Expected {len(params)} arguments, received {len(args)} {location}"
+                )
+                return 1
+            # TODO: Handle variadic functions with varying number of required arguments (0-N, 1-N, 2-N and so on)
     return 0
 
 

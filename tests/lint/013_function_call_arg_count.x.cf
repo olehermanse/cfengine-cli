@@ -1,0 +1,14 @@
+bundle agent main
+{
+vars:
+  "string1"
+    string => canonify();
+  "string2"
+    string => canonify("test");
+  "string3"
+    string => canonify("test", "test");
+reports:
+ "Test1 => $(string1)";
+ "Test2 => $(string2)";
+ "Test3 => $(string3)";
+}

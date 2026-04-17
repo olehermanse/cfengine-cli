@@ -1,0 +1,12 @@
+
+  "string1"
+    string => canonify();
+              ^--------^
+Error: Expected 1 arguments, received 0 at tests/lint/013_function_call_arg_count.x.cf:5:15
+
+  "string3"
+    string => canonify("test", "test");
+              ^----------------------^
+Error: Expected 1 arguments, received 2 at tests/lint/013_function_call_arg_count.x.cf:9:15
+FAIL: tests/lint/013_function_call_arg_count.x.cf (2 errors)
+Failure, 2 errors in total.
