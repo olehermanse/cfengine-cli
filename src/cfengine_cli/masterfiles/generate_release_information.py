@@ -170,21 +170,16 @@ def json_get_save_return(url: str, path: str) -> dict:
     try:
         r = requests.get(url)
         r.raise_for_status()
+        content = r.content
+        with open(path, "wb") as f:
+            f.write(content)
+        data = json.loads(content)
+        return data
     except requests.exceptions.RequestException:
         raise CFBSNetworkError(
             f"Downloading of {url} failed - check your Wi-Fi / network settings."
         )
-    content = r.content
-
-    try:
-        with open(path, "wb") as f:
-            f.write(content)
     except OSError:
         raise CFBSExitError(f"Failed to open and write content to {path}")
-
-    try:
-        data = json.loads(content)
     except json.JSONDecodeError:
         raise CFBSExitError(f"Failed to parse JSON from {url}.")
-
-    return data
