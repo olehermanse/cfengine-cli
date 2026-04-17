@@ -1,20 +1,12 @@
 
-    "error"
-      slist => {},
-      ^---------^
-
-      slist => {},
-      int => "10",
-      ^---------^
-
       policy => "free",
       real => "0.5";
-      ^-----------^
-Error: Mutually exclusive attribute values ('slist', 'int', 'real') for a single promiser inside vars-promise at tests/lint/011_mutually_exclusive_types_vars.x.cf:4:5
+      ^--^
+Error: Mutually exclusive attribute values (slist, int, real) for a single promiser inside vars-promise at tests/lint/011_mutually_exclusive_types_vars.x.cf:4:5
 
 
     "missing-error";
     ^--------------^
-Error: Missing attribute value for promiser "missing-error" inside vars-promise type at tests/lint/011_mutually_exclusive_types_vars.x.cf:16:5
+Error: Missing value for vars promise "missing-error" at tests/lint/011_mutually_exclusive_types_vars.x.cf:16:5
 FAIL: tests/lint/011_mutually_exclusive_types_vars.x.cf (2 errors)
 Failure, 2 errors in total.
