@@ -5,6 +5,8 @@ body common control{
 inputs => { "/var/cfengine/inputs/some_file.cf" };
 linux::
 inputs => { "/var/cfengine/inputs/other_file.cf" };
+ubuntu::
+inputs => {};
 }
 
 promise agent example{
@@ -26,6 +28,9 @@ baz::
 if => "bar"
 # Comment at atttribute level
 string => "some_value";
+"empty_list"
+slist => {
+};
 classes:
 # Comment before promise
 "a" if => "b";
