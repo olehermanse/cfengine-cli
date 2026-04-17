@@ -1,0 +1,19 @@
+bundle agent foo
+{
+  vars:
+    "error"
+      slist => {},
+      int => "10",
+      policy => "free",
+      real => "0.5";
+
+    "noerr"
+      slist => {};
+      int => "string";
+
+    "noerr"
+      slist => {}
+      int => "string";
+
+    "missing-error";
+}
