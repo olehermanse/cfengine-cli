@@ -287,7 +287,7 @@ class State:
         #       - Can record the parameters / signature
         #       - Can record whether the bundle is inside a macro
         #       - Can have a list of classes and vars defined inside
-        self.bundles[name] = True
+        self.bundles[name] = {"is_defined": True}
 
     def add_body(self, name: str) -> None:
         """This is called during discovery wherever a body is defined.
@@ -299,7 +299,7 @@ class State:
         body file control {}
         """
         name = _qualify(name, self.namespace)
-        self.bodies[name] = True
+        self.bodies[name] = {"is_defined": True}
 
     def add_promise_type(self, name: str) -> None:
         """This is called during discovery wherever a custom promise type is
@@ -461,12 +461,22 @@ def _discover_node(node: Node, state: State) -> int:
         if name == "control":
             return 0  # No need to define control blocks
         state.add_body(name)
+        qualified_name = _qualify(name, state.namespace)
+        if (n := node.next_named_sibling) and n.type == "parameter_list":
+            _, *args, _ = n.children
+            args = list(filter(",".__ne__, iter(_text(x) for x in args)))
+            state.bodies[qualified_name].update({"parameters": args})
         return 0
 
     # Define bundles:
     if node.type == "bundle_block_name":
         name = _text(node)
+        qualified_name = _qualify(name, state.namespace)
         state.add_bundle(name)
+        if (n := node.next_named_sibling) and n.type == "parameter_list":
+            _, *args, _ = n.children
+            args = list(filter(",".__ne__, iter(_text(x) for x in args)))
+            state.bundles[qualified_name].update({"parameters": args})
         return 0
 
     # Define custom promise types:
@@ -661,8 +671,12 @@ def _lint_node(
         )
         return 1
     if node.type == "call":
+        known_faulty_defs = {"regex_replace"}
         call, _, *args, _ = node.children  # f ( a1 , a2 , a..N )
         call = _text(call)
+        if call in known_faulty_defs:
+            return 0
+
         args = list(filter(",".__ne__, iter(_text(x) for x in args)))
 
         if call in syntax_data.BUILTIN_FUNCTIONS:
@@ -671,10 +685,28 @@ def _lint_node(
             if not variadic and (len(params) != len(args)):
                 _highlight_range(node, lines)
                 print(
-                    f"Error: Expected {len(params)} arguments, received {len(args)} {location}"
+                    f"Error: Expected {len(params)} arguments, received {len(args)} for function '{call}' {location}"
                 )
                 return 1
             # TODO: Handle variadic functions with varying number of required arguments (0-N, 1-N, 2-N and so on)
+        qualified_name = _qualify(call, state.namespace)
+        if qualified_name in state.bundles:
+            params = state.bundles[qualified_name].get("parameters", [])
+            if len(params) != len(args):
+                _highlight_range(node, lines)
+                print(
+                    f"Error: Expected {len(params)} arguments, received {len(args)} for bundle '{call}' {location}"
+                )
+                return 1
+        if qualified_name in state.bodies:
+            params = state.bodies[qualified_name].get("parameters", [])
+            if len(params) != len(args):
+                _highlight_range(node, lines)
+                print(
+                    f"Error: Expected {len(params)} arguments, received {len(args)} for body '{call}' {location}"
+                )
+                return 1
+
     return 0
 
 

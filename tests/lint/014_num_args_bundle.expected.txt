@@ -1,0 +1,17 @@
+
+    "test1"
+      usebundle => test();
+                   ^----^
+Error: Expected 2 arguments, received 0 for bundle 'test' at tests/lint/014_num_args_bundle.x.cf:5:20
+
+    "test2"
+      usebundle => test("a");
+                   ^-------^
+Error: Expected 2 arguments, received 1 for bundle 'test' at tests/lint/014_num_args_bundle.x.cf:7:20
+
+    "test4"
+      usebundle => test("a", "b", "c");
+                   ^-----------------^
+Error: Expected 2 arguments, received 3 for bundle 'test' at tests/lint/014_num_args_bundle.x.cf:11:20
+FAIL: tests/lint/014_num_args_bundle.x.cf (3 errors)
+Failure, 3 errors in total.

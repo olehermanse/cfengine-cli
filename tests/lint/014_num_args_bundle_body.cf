@@ -1,0 +1,11 @@
+bundle agent main
+{
+  methods:
+    "test"
+      usebundle => test("a", "b");
+}
+bundle agent test(a, b)
+{
+  reports:
+    "$(a) to $(b)";
+}

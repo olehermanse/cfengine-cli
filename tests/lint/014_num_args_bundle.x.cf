@@ -1,0 +1,17 @@
+bundle agent main
+{
+  methods:
+    "test1"
+      usebundle => test();
+    "test2"
+      usebundle => test("a");
+    "test3"
+      usebundle => test("a", "b");
+    "test4"
+      usebundle => test("a", "b", "c");
+}
+bundle agent test(a, b)
+{
+  reports:
+    "$(a) to $(b)";
+}
