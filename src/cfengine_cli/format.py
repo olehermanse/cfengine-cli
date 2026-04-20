@@ -66,6 +66,9 @@ class Formatter:
         self.empty: bool = True
         self.previous: Node | None = None
         self.buffer: str = ""
+        # Indentation level saved when @if is encountered, restored after
+        # @else so that both branches are formatted at the same depth.
+        self.macro_indent: int = 0
 
     def _write(self, message: str, end: str = "\n") -> None:
         """Append text to the buffer with the given line ending."""
@@ -432,6 +435,8 @@ def can_single_line_promise(node: Node, indent: int, line_length: int) -> bool:
     children = node.children
     attrs = [c for c in children if c.type == "attribute"]
     next_sib = node.next_named_sibling
+    while next_sib and next_sib.type == "macro":
+        next_sib = next_sib.next_named_sibling
     if len(attrs) > 1:
         # We always want to multiline a promise with multiple attributes
         # even if it would fit on one line, i.e this should be split:
@@ -479,7 +484,6 @@ def _format_promise(
     fmt: Formatter,
     indent: int,
     line_length: int,
-    macro_indent: int,
 ) -> bool:
     """Format a promise node. Returns True if handled, False to fall through."""
     # Single-line promise
@@ -513,7 +517,7 @@ def _format_promise(
         close_indent = indent + 2
         if attrs:
             fmt.print("}", close_indent)
-            _format_remaining_children(children, fmt, indent, line_length, macro_indent)
+            _format_remaining_children(children, fmt, indent, line_length)
         else:
             fmt.print("};", close_indent)
         return True
@@ -522,7 +526,7 @@ def _format_promise(
     prefix = _promiser_line_with_stakeholder(children)
     if prefix:
         fmt.print(prefix, indent)
-        _format_remaining_children(children, fmt, indent, line_length, macro_indent)
+        _format_remaining_children(children, fmt, indent, line_length)
         return True
 
     return False
@@ -533,13 +537,12 @@ def _format_remaining_children(
     fmt: Formatter,
     indent: int,
     line_length: int,
-    macro_indent: int,
 ) -> None:
     """Format promise children, skipping promiser/arrow/stakeholder parts."""
     for child in children:
         if child.type in PROMISER_PARTS:
             continue
-        autoformat(child, fmt, line_length, macro_indent, indent)
+        autoformat(child, fmt, line_length, indent)
 
 
 # ---------------------------------------------------------------------------
@@ -570,7 +573,10 @@ def _format_block_header(node: Node, fmt: Formatter) -> list[Node]:
         # Skip over preceding empty comments since they will be removed
         while prev_sib and prev_sib.type == "comment" and _is_empty_comment(prev_sib):
             prev_sib = prev_sib.prev_named_sibling
-        if not (prev_sib and prev_sib.type == "comment"):
+        is_macro_wrapped = (
+            prev_sib and prev_sib.type == "macro" and text(prev_sib).startswith("@if")
+        )
+        if not (prev_sib and prev_sib.type == "comment") and not is_macro_wrapped:
             fmt.blank_line()
     fmt.print(line, 0)
     for i, comment in enumerate(header_comments):
@@ -599,14 +605,20 @@ def _needs_blank_line_before(child: Node, indent: int, line_length: int) -> bool
     if child.type == "bundle_section":
         return prev.type == "bundle_section"
 
-    if child.type == "promise" and prev.type in {"promise", "half_promise"}:
-        promise_indent = indent + 2
-        both_single = (
-            prev.type == "promise"
-            and can_single_line_promise(prev, promise_indent, line_length)
-            and can_single_line_promise(child, promise_indent, line_length)
-        )
-        return not both_single
+    if child.type == "promise":
+        # Skip past macros to find the content-bearing previous sibling,
+        # so we detect promise groups separated by macro-split halves.
+        prev_content = prev
+        while prev_content and prev_content.type == "macro":
+            prev_content = prev_content.prev_named_sibling
+        if prev_content and prev_content.type in {"promise", "half_promise"}:
+            promise_indent = indent + 2
+            both_single = (
+                prev_content.type == "promise"
+                and can_single_line_promise(prev_content, promise_indent, line_length)
+                and can_single_line_promise(child, promise_indent, line_length)
+            )
+            return not both_single
 
     if child.type in CLASS_GUARD_TYPES:
         return prev.type in {"promise", "half_promise", "class_guarded_promises"}
@@ -637,8 +649,8 @@ def _is_empty_comment(node: Node) -> bool:
 
 
 def _skip_comments(sibling: Node | None, direction: str = "next") -> Node | None:
-    """Walk past adjacent comment siblings to find the nearest non-comment."""
-    while sibling and sibling.type == "comment":
+    """Walk past adjacent comment and macro siblings to find the nearest content node."""
+    while sibling and sibling.type in ("comment", "macro"):
         sibling = (
             sibling.next_named_sibling
             if direction == "next"
@@ -670,7 +682,6 @@ def autoformat(
     node: Node,
     fmt: Formatter,
     line_length: int,
-    macro_indent: int,
     indent: int = 0,
 ) -> None:
     """Recursively format a tree-sitter node tree into the Formatter buffer."""
@@ -678,13 +689,18 @@ def autoformat(
 
     # Macro handling
     if previous and previous.type == "macro" and text(previous).startswith("@else"):
-        indent = macro_indent
+        if node.type != "half_promise":
+            indent = fmt.macro_indent
     if node.type == "macro":
-        fmt.print(node, 0)
         if text(node).startswith("@if"):
-            macro_indent = indent
+            # Add blank line before @if at top level if preceded by a block
+            prev_sib = node.prev_named_sibling
+            if prev_sib and prev_sib.type in BLOCK_TYPES and not fmt.empty:
+                fmt.blank_line()
+            fmt.macro_indent = indent
         elif text(node).startswith("@else"):
-            indent = macro_indent
+            indent = fmt.macro_indent
+        fmt.print(node, 0)
         return
 
     # Block header (bundle/body/promise blocks)
@@ -703,7 +719,7 @@ def autoformat(
 
     # Promise — delegate to promise formatter
     if node.type == "promise":
-        if _format_promise(node, children, fmt, indent, line_length, macro_indent):
+        if _format_promise(node, children, fmt, indent, line_length):
             return
 
     # Interior node with children — recurse
@@ -711,7 +727,7 @@ def autoformat(
         for child in children:
             if _needs_blank_line_before(child, indent, line_length):
                 fmt.blank_line()
-            autoformat(child, fmt, line_length, macro_indent, indent)
+            autoformat(child, fmt, line_length, indent)
         return
 
     # Leaf nodes
@@ -739,7 +755,6 @@ def format_policy_file(filename: str, line_length: int, check: bool) -> int:
     PY_LANGUAGE = Language(tscfengine.language())
     parser = Parser(PY_LANGUAGE)
 
-    macro_indent = 0
     fmt = Formatter()
     with open(filename, "rb") as f:
         original_data = f.read()
@@ -747,7 +762,7 @@ def format_policy_file(filename: str, line_length: int, check: bool) -> int:
 
     root_node = tree.root_node
     assert root_node.type == "source_file"
-    autoformat(root_node, fmt, line_length, macro_indent)
+    autoformat(root_node, fmt, line_length)
 
     new_data = fmt.buffer + "\n"
     if new_data != original_data.decode("utf-8"):
@@ -768,14 +783,13 @@ def format_policy_fin_fout(
     PY_LANGUAGE = Language(tscfengine.language())
     parser = Parser(PY_LANGUAGE)
 
-    macro_indent = 0
     fmt = Formatter()
     original_data = fin.read().encode("utf-8")
     tree = parser.parse(original_data)
 
     root_node = tree.root_node
     assert root_node.type == "source_file"
-    autoformat(root_node, fmt, line_length, macro_indent)
+    autoformat(root_node, fmt, line_length)
 
     new_data = fmt.buffer + "\n"
     fout.write(new_data)

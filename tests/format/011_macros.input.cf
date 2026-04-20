@@ -1,0 +1,84 @@
+bundle agent main
+{
+vars:
+"v" string => "hello";
+@if minimum_version(3.18)
+"new_var" string => "only in 3.18+";
+@endif
+reports:
+"Hello!";
+@if minimum_version(3.20)
+"New report";
+@endif
+}
+
+bundle agent other
+{
+@if minimum_version(3.18)
+vars:
+"v" string => "value";
+@else
+vars:
+"v" string => "old_value";
+@endif
+}
+
+@if minimum_version(3.18)
+bundle agent new_bundle
+{
+reports:
+"Only available in 3.18+";
+}
+@endif
+
+bundle agent half_promises
+{
+vars:
+"promiser"
+@if minimum_version(3.18)
+string => "new_value";
+@else
+string => "old_value";
+@endif
+"another"
+@if minimum_version(3.18)
+string => "new";
+@else
+string => "old";
+@endif
+}
+
+bundle agent comments_and_macros
+{
+vars:
+# Comment before macro
+@if minimum_version(3.18)
+"v" string => "new";
+@endif
+# Comment after macro
+"w" string => "always";
+@if minimum_version(3.18)
+# Comment inside macro block
+"x" string => "new_with_comment";
+@endif
+reports:
+# Report comment
+@if minimum_version(3.20)
+# Another comment
+"New report";
+@endif
+"Always report";
+}
+
+bundle agent half_with_comment
+{
+vars:
+# Comment before half promise
+"promiser"
+# Comment before macro in half promise
+@if minimum_version(3.18)
+string => "new_value";
+@else
+string => "old_value";
+@endif
+}
