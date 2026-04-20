@@ -1,0 +1,18 @@
+bundle agent main
+{
+  vars:
+    "users1" slist => getusers();
+    "users2" slist => getusers("a");
+    "users3" slist => getusers("a", "b");
+    "users4" slist => getusers("a", "b", "c", "d");
+    "file1" string => readfile("/tmp/tmp.txt");
+    "file2" string => readfile("/tmp/tmp.txt", "100", "/tmp/tmp2.txt");
+
+  reports:
+    "found user1 $(users1)";
+    "found user2 $(users2)";
+    "found user3 $(users3)";
+    "found user4 $(users4)";
+    "found file1 $(file1)";
+    "found file2 $(file2)";
+}
