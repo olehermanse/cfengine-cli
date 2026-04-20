@@ -673,33 +673,62 @@ def _lint_node(
         if call in KNOWN_FAULTY_FUNCTION_DEFS:
             return 0
 
-        args = list(filter(",".__ne__, iter(_text(x) for x in args)))
+        args = list(
+            filter(",".__ne__, iter(_text(x) for x in args if x.type != "comment"))
+        )
 
         if call in syntax_data.BUILTIN_FUNCTIONS:
-            variadic = syntax_data.BUILTIN_FUNCTIONS.get(call, {}).get("variadic", True)
-            params = syntax_data.BUILTIN_FUNCTIONS.get(call, {}).get("parameters", {})
-            if not variadic and (len(params) != len(args)):
+            func = syntax_data.BUILTIN_FUNCTIONS.get(call, {})
+            variadic = func.get("variadic", True)
+            # variadic meaning variable amount of arguments allowed
+            # -1, -1 // default -- all required, aka. non-variadic func
+            # 1, -1  // 1-n
+            # 0, -1  // 0-n
+            # 2, 3   // 2-3
+            min_args = func.get("minArgs", -1)
+            max_args = func.get("maxArgs", -1)
+            if variadic:
+                assert min_args != -1
+                assert min_args != max_args
+                if max_args == -1:
+                    max_args = float("inf")  # N args allowed
+            else:
+                assert min_args == -1 and max_args == -1
+                # If min args -1 (meaning all required), max should be the same
+                # All args required, use len of parameter list
+                min_args = max_args = len(func.get("parameters", []))
+
+            if not (min_args <= len(args) <= max_args):
                 _highlight_range(node, lines)
+                argc_str = (
+                    f"at least {min_args}"
+                    if max_args == float("inf")
+                    else (
+                        f"{min_args}-{max_args}"
+                        if min_args != max_args
+                        else str(max_args)
+                    )
+                )
                 print(
-                    f"Error: Expected {len(params)} arguments, received {len(args)} for function '{call}' {location}"
+                    f"Error: Expected {argc_str} arguments, received {len(args)} for function '{call}' {location}"
                 )
                 return 1
-            # TODO: Handle variadic functions with varying number of required arguments (0-N, 1-N, 2-N and so on)
+
         qualified_name = _qualify(call, state.namespace)
         if qualified_name in state.bundles:
-            params = state.bundles[qualified_name].get("parameters", [])
-            if len(params) != len(args):
+            max_args = len(state.bundles[qualified_name].get("parameters", []))
+            if max_args != len(args):
                 _highlight_range(node, lines)
                 print(
-                    f"Error: Expected {len(params)} arguments, received {len(args)} for bundle '{call}' {location}"
+                    f"Error: Expected {max_args} arguments, received {len(args)} for bundle '{call}' {location}"
                 )
                 return 1
         if qualified_name in state.bodies:
-            params = state.bodies[qualified_name].get("parameters", [])
-            if len(params) != len(args):
+            max_args = len(state.bodies[qualified_name].get("parameters", []))
+            if max_args != len(args):
                 _highlight_range(node, lines)
                 print(
-                    f"Error: Expected {len(params)} arguments, received {len(args)} for body '{call}' {location}"
+                    f"Error: Expected {max_args} arguments, received {len(args)} for body '{call}' {location}"
                 )
                 return 1
 
