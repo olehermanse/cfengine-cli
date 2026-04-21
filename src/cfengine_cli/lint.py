@@ -130,7 +130,7 @@ class PolicyFile:
     reused when we iterate over it multiple times.
 
     We store filename, raw data (bytes), array of lines, and syntax tree/nodes.
-    This is a but of "duplication", but they are useful for printing nice
+    This is a bit of "duplication", but they are useful for printing nice
     linting errors.
 
     This is intended as a read-only view of the policy file, not to be used for
