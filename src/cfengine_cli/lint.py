@@ -986,8 +986,8 @@ def _walk_callback(node: Node, callback: Callable[[Node], int]) -> int:
 def _parse_policy_file(filename: str) -> tuple[Tree, list[str], bytes]:
     """Parse a policy file into a syntax tree using tree sitter.
 
-    This function is used by PolicyFile constructor, in most cases it will be
-    to call Policyfile(filename) instead of this function."""
+    This function is used by PolicyFile constructor, in most cases it is better
+    to call PolicyFile(filename) instead of this function."""
     assert os.path.isfile(filename)
     PY_LANGUAGE = Language(tscfengine.language())
     parser = Parser(PY_LANGUAGE)
