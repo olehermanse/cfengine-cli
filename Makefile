@@ -19,8 +19,8 @@ lint: venv
 install:
 	pipx install --force --editable .
 
-check: venv format lint install
+check: venv format lint
 	uv run pytest
-	bash tests/run-lint-tests.sh
-	bash tests/run-format-tests.sh
-	bash tests/run-shell-tests.sh
+	uv run bash tests/run-lint-tests.sh
+	uv run bash tests/run-format-tests.sh
+	uv run bash tests/run-shell-tests.sh

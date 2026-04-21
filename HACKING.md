@@ -18,17 +18,17 @@ make format
 
 ## Installing from source:
 
-For developers working on CFEngine CLI, it is recommended to install an editable version of the tool:
+For developers working on CFEngine CLI, you can install it globally using pipx:
 
 ```bash
 make install
 ```
 
-Some of the tests require that you have the CLI installed (they run `cfengine` commands).
+This is optional — `make check` and `uv run` work without a global install.
 
 ## Running commands without installing
 
-You can also run commands without installing, using `uv`:
+You can run commands without installing globally, using `uv`:
 
 ```bash
 uv run cfengine format
@@ -46,9 +46,9 @@ Running individual test suites:
 
 ```bash
 uv run pytest
-bash tests/run-lint-tests.sh
-bash tests/run-format-tests.sh
-bash tests/run-shell-tests.sh
+uv run bash tests/run-lint-tests.sh
+uv run bash tests/run-format-tests.sh
+uv run bash tests/run-shell-tests.sh
 ```
 
 ## Releasing new versions
