@@ -437,6 +437,11 @@ def can_single_line_promise(node: Node, indent: int, line_length: int) -> bool:
     next_sib = node.next_named_sibling
     while next_sib and next_sib.type == "macro":
         next_sib = next_sib.next_named_sibling
+
+    if not attrs and not _has_stakeholder(children):
+        # Promises without attributes and without stakeholder are
+        # always single line
+        return True
     if len(attrs) > 1:
         # We always want to multiline a promise with multiple attributes
         # even if it would fit on one line, i.e this should be split:

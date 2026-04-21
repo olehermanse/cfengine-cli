@@ -35,3 +35,42 @@ bundle agent main
 
       "libltdl-dev" package_policy => "delete";
 }
+
+bundle agent mix
+{
+reports:
+DEBUG|DEBUG_cfe_internal_cleanup_agent_reports::
+"DEBUG $(this.bundle): Size of '$(files)' =  '$(reports_size[$(files)])'";
+"DEBUG $(this.bundle): Size of all reports = '$(total_report_size)'";
+
+"DEBUG $(this.bundle): Client history purge triggered"
+  if => "cfe_internal_purge_reports";
+
+"DEBUG $(this.bundle): Size of '$(files)' =  '$(reports_size[$(files)])'";
+"DEBUG $(this.bundle): Size of all reports = '$(total_report_size)'";
+"DEBUG $(this.bundle): Purge threshold = '$(def.max_client_history_size)'";
+
+"DEBUG $(this.bundle): Client history purge triggered"
+  if => "cfe_internal_purge_reports";
+
+"DEBUG $(this.bundle): Size of '$(files)' =  '$(reports_size[$(files)])'";
+"DEBUG $(this.bundle): Size of all reports = '$(total_report_size)'";
+"DEBUG $(this.bundle): Purge threshold = '$(def.max_client_history_size)'";
+"DEBUG $(this.bundle): Size of all reports = '$(total_report_size)'";
+"DEBUG $(this.bundle): Purge threshold = '$(def.max_client_history_size)'";
+
+"DEBUG $(this.bundle): Client history purge triggered"
+  if => "cfe_internal_purge_reports";
+
+"DEBUG $(this.bundle): Client history purge triggered"
+  if => "cfe_internal_purge_reports";
+
+"DEBUG $(this.bundle): Client history purge triggered"
+  if => "cfe_internal_purge_reports";
+
+"DEBUG $(this.bundle): Size of '$(files)' =  '$(reports_size[$(files)])'";
+"DEBUG $(this.bundle): Size of all reports = '$(total_report_size)'";
+"DEBUG $(this.bundle): Purge threshold = '$(def.max_client_history_size)'";
+"DEBUG $(this.bundle): Size of all reports = '$(total_report_size)'";
+"DEBUG $(this.bundle): Purge threshold = '$(def.max_client_history_size)'";
+}
