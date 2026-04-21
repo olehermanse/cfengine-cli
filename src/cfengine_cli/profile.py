@@ -106,7 +106,7 @@ def generate_callstack(data, stack_path):
         "Successfully generated callstack at '{}'".format(os.path.abspath(stack_path))
     )
     print(
-        "Run './flamgraph {} > flamegraph.svg' to generate the flamegraph".format(
+        "Run './flamegraph {} > flamegraph.svg' to generate the flamegraph".format(
             stack_path
         )
     )
