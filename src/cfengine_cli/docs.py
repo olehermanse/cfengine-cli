@@ -346,20 +346,22 @@ def _process_markdown_code_blocks(
                 os.remove(snippet_path)
 
 
-def _run_black(path):
-    print(f"Formatting '{path}' with black...")
+def _run_formatter(tool, args, cwd, install_hint):
+    print(f"Formatting with {tool}...")
     try:
         subprocess.run(
-            ["black", path],
+            [tool, *args],
             capture_output=True,
             text=True,
             check=True,
-            cwd=".",
+            cwd=cwd,
         )
     except:
-        raise UserError(
-            "Encountered an error running black\nInstall: pipx install black"
-        )
+        raise UserError(f"Encountered an error running {tool}\nInstall: {install_hint}")
+
+
+def _run_black(path):
+    _run_formatter("black", [path], ".", "pipx install black")
 
 
 def _run_prettier(path):
@@ -378,21 +380,15 @@ def _run_prettier(path):
             args.append("**.md")
         if not args:
             return
-    try:
-        # Warning: Beware of shell expansion if you try to run this in your terminal.
-        # Wrong: prettier --write **.markdown **.md
-        # Right: prettier --write '**.markdown' '**.md'
-        subprocess.run(
-            ["prettier", "--embedded-language-formatting", "off", "--write", *args],
-            capture_output=True,
-            text=True,
-            check=True,
-            cwd=directory,
-        )
-    except:
-        raise UserError(
-            "Encountered an error running prettier\nInstall: npm install --global prettier"
-        )
+    # Warning: Beware of shell expansion if you try to run this in your terminal.
+    # Wrong: prettier --write **.markdown **.md
+    # Right: prettier --write '**.markdown' '**.md'
+    _run_formatter(
+        "prettier",
+        ["--embedded-language-formatting", "off", "--write", *args],
+        directory,
+        "npm install --global prettier",
+    )
 
 
 def _update_docs_single_arg(path):
