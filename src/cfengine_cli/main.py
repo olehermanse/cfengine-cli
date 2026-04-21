@@ -59,7 +59,7 @@ def _get_arg_parser():
         default="yes",
         help="Strict mode. Default=yes, checks for undefined promise types, bundles, bodies, functions",
     )
-    lnt.add_argument("files", nargs="*", help="Files to format")
+    lnt.add_argument("files", nargs="*", help="Files to lint")
     subp.add_parser(
         "report",
         help="Run the agent and hub commands necessary to get new reporting data",
@@ -101,17 +101,17 @@ def _get_arg_parser():
 
     parser.add_argument(
         "--omit-download",
-        help="Use existing masterfiles instead of downloading in 'cfbs generate-release-information'",
+        help="Use existing masterfiles instead of downloading in 'cfengine dev generate-release-information'",
         action="store_true",
     )
     parser.add_argument(
         "--check-against-git",
-        help="Check whether masterfiles from cfengine.com and github.com match in 'cfbs generate-release-information'",
+        help="Check whether masterfiles from cfengine.com and github.com match in 'cfengine dev generate-release-information'",
         action="store_true",
     )
     parser.add_argument(
         "--from",
-        help="Specify minimum version in 'cfbs generate-release-information'",
+        help="Specify minimum version in 'cfengine dev generate-release-information'",
         dest="minimum_version",
     )
 

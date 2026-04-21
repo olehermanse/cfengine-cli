@@ -40,6 +40,18 @@ from cfbs.utils import find
 from cfengine_cli.utils import UserError
 
 LINT_EXTENSIONS = (".cf", ".json")
+DEFAULT_NAMESPACE = "default"
+VARS_TYPES = {
+    "data",
+    "ilist",
+    "int",
+    "real",
+    "rlist",
+    "slist",
+    "string",
+}
+PROMISE_BLOCK_ATTRIBUTES = ("path", "interpreter")
+KNOWN_FAULTY_FUNCTION_DEFS = {"regex_replace"}
 
 
 @dataclass
@@ -130,7 +142,7 @@ class PolicyFile:
     reused when we iterate over it multiple times.
 
     We store filename, raw data (bytes), array of lines, and syntax tree/nodes.
-    This is a but of "duplication", but they are useful for printing nice
+    This is a bit of "duplication", but they are useful for printing nice
     linting errors.
 
     This is intended as a read-only view of the policy file, not to be used for
@@ -140,7 +152,7 @@ class PolicyFile:
     - Whether the file is empty
     - Whether the file has syntax errors
     - Whether the file uses macros (Macros can indicate we need to be less strict)
-    - Things defined and referenced in the file (bundles, bodies, promise types, )
+    - Things defined and referenced in the file (bundles, bodies, promise types)
     """
 
     def __init__(self, filename: str, snippet: Snippet | None = None):
@@ -179,7 +191,7 @@ class State:
     block_name: str | None = None
     promise_type: str | None = None  # "vars" | "files" | "classes" | ... | None
     attribute_name: str | None = None  # "if" | "string" | "slist" | ... | None
-    namespace: str = "default"  # "ns" | "default" | ... |
+    namespace: str = DEFAULT_NAMESPACE  # "ns" | "default" | ... |
     mode: Mode = Mode.NONE
     walking: bool = False
     strict: bool = True
@@ -244,7 +256,7 @@ class State:
         assert self.mode != Mode.NONE
 
         self.policy_file = policy_file
-        self.namespace = "default"
+        self.namespace = DEFAULT_NAMESPACE
         self.walking = True
 
     def end_file(self) -> None:
@@ -562,16 +574,6 @@ def _lint_node(
         return 1
     if state.promise_type == "vars" and node.type == "promise":
         attribute_nodes = [x for x in node.children if x.type == "attribute"]
-        # Each vars promise must include exactly 1 of these attributes (a value):
-        vars_types = {
-            "data",
-            "ilist",
-            "int",
-            "real",
-            "rlist",
-            "slist",
-            "string",
-        }
         # Attributes are children of a promise, and attribute names are children of attributes
         # Need to iterate inside to find the attribute name (data, ilist, int, etc.)
         value_nodes = []
@@ -579,7 +581,7 @@ def _lint_node(
             for child in attr.children:
                 if child.type != "attribute_name":
                     continue
-                if _text(child) in vars_types:
+                if _text(child) in VARS_TYPES:
                     # Ignore the other attributes which are not values
                     value_nodes.append(child)
 
@@ -658,12 +660,7 @@ def _lint_node(
     if (
         state.block_keyword == "promise"
         and node.type == "attribute_name"
-        and state.attribute_name
-        not in (
-            None,
-            "path",
-            "interpreter",
-        )
+        and state.attribute_name not in (None, *PROMISE_BLOCK_ATTRIBUTES)
     ):
         _highlight_range(node, lines)
         print(
@@ -671,10 +668,9 @@ def _lint_node(
         )
         return 1
     if node.type == "call":
-        known_faulty_defs = {"regex_replace"}
         call, _, *args, _ = node.children  # f ( a1 , a2 , a..N )
         call = _text(call)
-        if call in known_faulty_defs:
+        if call in KNOWN_FAULTY_FUNCTION_DEFS:
             return 0
 
         args = list(filter(",".__ne__, iter(_text(x) for x in args)))
@@ -986,8 +982,8 @@ def _walk_callback(node: Node, callback: Callable[[Node], int]) -> int:
 def _parse_policy_file(filename: str) -> tuple[Tree, list[str], bytes]:
     """Parse a policy file into a syntax tree using tree sitter.
 
-    This function is used by PolicyFile constructor, in most cases it will be
-    to call Policyfile(filename) instead of this function."""
+    This function is used by PolicyFile constructor, in most cases it is better
+    to call PolicyFile(filename) instead of this function."""
     assert os.path.isfile(filename)
     PY_LANGUAGE = Language(tscfengine.language())
     parser = Parser(PY_LANGUAGE)

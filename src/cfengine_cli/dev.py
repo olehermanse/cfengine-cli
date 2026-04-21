@@ -25,53 +25,42 @@ def _continue_prompt() -> bool:
     return answer in ("y", "yes")
 
 
-def _expect_repo(repo) -> bool:
+def _expect_repo(repo):
     cwd = os.getcwd()
     if cwd.endswith(repo):
-        return True
+        return
     print(f"Note: This command is intended to be run in the {repo} repo")
     print(f"      https://github.com/cfengine/{repo}")
-    answer = _continue_prompt()
-    return answer
+    if not _continue_prompt():
+        raise UserError(f"Aborted (expected to be in {repo} repo)")
 
 
 def update_dependency_tables() -> int:
-    answer = _expect_repo("buildscripts")
-    if answer:
-        return _update_dependency_tables()
-    return 1
+    _expect_repo("buildscripts")
+    return _update_dependency_tables()
 
 
 def print_dependency_tables(args) -> int:
-    versions = args.versions
-    answer = _expect_repo("buildscripts")
-    if answer:
-        return print_release_dependency_tables(versions)
-    return 1
+    _expect_repo("buildscripts")
+    return print_release_dependency_tables(args.versions)
 
 
 def format_docs(files) -> int:
-    answer = _expect_repo("documentation")
-    if answer:
-        return update_docs(files)
-    return 1
+    _expect_repo("documentation")
+    return update_docs(files)
 
 
 def lint_docs() -> int:
-    answer = _expect_repo("documentation")
-    if answer:
-        return check_docs()
-    return 1
+    _expect_repo("documentation")
+    return check_docs()
 
 
 def generate_release_information(
     omit_download=False, check=False, min_version=None
 ) -> int:
-    answer = _expect_repo("release-information")
-    if answer:
-        generate_release_information_command(omit_download, check, min_version)
-        return 0
-    return 1
+    _expect_repo("release-information")
+    generate_release_information_command(omit_download, check, min_version)
+    return 0
 
 
 def dispatch_dev_subcommand(subcommand, args) -> int:
