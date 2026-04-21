@@ -83,3 +83,29 @@ bundle agent half_with_comment
       string => "old_value";
 @endif
 }
+
+bundle common cfe_internal_inputs
+# @brief Include internal self management policies
+{
+  vars:
+    enterprise_edition.(policy_server|am_policy_hub)::
+      "input[enterprise_hub_specific]"
+        string => "cfe_internal/enterprise/CFE_hub_specific.cf",
+        comment => "Lorem ipsum.";
+@if minimum_version(3.12.0)
+      "input[enterprise_hub_federation]"
+        string => "cfe_internal/enterprise/federation/federation.cf",
+        comment => "Lorem ipsum.";
+@endif
+    enterprise_edition::
+      "input[enterprise_knowledge]"
+        string => "cfe_internal/enterprise/CFE_knowledge.cf",
+        comment => "Lorem ipsum.";
+
+      "input[enterprise_main]"
+        string => "cfe_internal/enterprise/main.cf",
+        comment => "Lorem ipsum.";
+
+    any::
+      "inputs" slist => getvalues("input");
+}

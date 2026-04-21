@@ -606,6 +606,9 @@ def _needs_blank_line_before(child: Node, indent: int, line_length: int) -> bool
         return prev.type == "bundle_section"
 
     if child.type == "promise":
+        # An @if macro already provides visual separation
+        if prev.type == "macro" and text(prev).startswith("@if"):
+            return False
         # Skip past macros to find the content-bearing previous sibling,
         # so we detect promise groups separated by macro-split halves.
         prev_content = prev
