@@ -140,7 +140,7 @@ class PolicyFile:
     - Whether the file is empty
     - Whether the file has syntax errors
     - Whether the file uses macros (Macros can indicate we need to be less strict)
-    - Things defined and referenced in the file (bundles, bodies, promise types, )
+    - Things defined and referenced in the file (bundles, bodies, promise types)
     """
 
     def __init__(self, filename: str, snippet: Snippet | None = None):
