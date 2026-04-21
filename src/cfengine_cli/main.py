@@ -59,7 +59,7 @@ def _get_arg_parser():
         default="yes",
         help="Strict mode. Default=yes, checks for undefined promise types, bundles, bodies, functions",
     )
-    lnt.add_argument("files", nargs="*", help="Files to format")
+    lnt.add_argument("files", nargs="*", help="Files to lint")
     subp.add_parser(
         "report",
         help="Run the agent and hub commands necessary to get new reporting data",
