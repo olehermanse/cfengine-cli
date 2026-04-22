@@ -7,6 +7,7 @@ import json
 import tree_sitter_cfengine as tscfengine
 from tree_sitter import Language, Parser, Node
 from cfbs.pretty import pretty_file, pretty_check_file
+from cfengine_cli.lint import check_policy_syntax
 
 # Node types that increase indentation by 2 when entered
 INDENTED_TYPES = {
@@ -778,19 +779,23 @@ def format_policy_file(filename: str, line_length: int, check: bool) -> int:
     """Format a .cf policy file in place, writing only if content changed.
 
     Returns 0 in case of successful reformat or no reformat needed.
-    Returns 1 when check is True and reformat is needed."""
+    Returns 1 when check is True and reformat is needed.
+    Raises PolicySyntaxError when the file has syntax errors."""
     assert filename.endswith(".cf")
 
     PY_LANGUAGE = Language(tscfengine.language())
     parser = Parser(PY_LANGUAGE)
 
-    fmt = Formatter()
     with open(filename, "rb") as f:
         original_data = f.read()
     tree = parser.parse(original_data)
 
     root_node = tree.root_node
     assert root_node.type == "source_file"
+
+    check_policy_syntax(tree, filename)
+
+    fmt = Formatter()
     autoformat(root_node, fmt, line_length)
 
     new_data = fmt.buffer + "\n"
@@ -808,16 +813,21 @@ def format_policy_file(filename: str, line_length: int, check: bool) -> int:
 def format_policy_fin_fout(
     fin: IO[str], fout: IO[str], line_length: int, check: bool
 ) -> int:
-    """Format CFEngine policy read from fin, writing the result to fout."""
+    """Format CFEngine policy read from fin, writing the result to fout.
+
+    Raises PolicySyntaxError when the input has syntax errors."""
     PY_LANGUAGE = Language(tscfengine.language())
     parser = Parser(PY_LANGUAGE)
 
-    fmt = Formatter()
     original_data = fin.read().encode("utf-8")
     tree = parser.parse(original_data)
 
     root_node = tree.root_node
     assert root_node.type == "source_file"
+
+    check_policy_syntax(tree, "<stdin>")
+
+    fmt = Formatter()
     autoformat(root_node, fmt, line_length)
 
     new_data = fmt.buffer + "\n"

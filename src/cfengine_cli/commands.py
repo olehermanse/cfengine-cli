@@ -4,7 +4,7 @@ import re
 import json
 from cfengine_cli.profile import profile_cfengine, generate_callstack
 from cfengine_cli.dev import dispatch_dev_subcommand
-from cfengine_cli.lint import lint_args
+from cfengine_cli.lint import lint_args, PolicySyntaxError
 from cfengine_cli.shell import user_command
 from cfengine_cli.paths import bin
 from cfengine_cli.version import cfengine_cli_version_string
@@ -51,6 +51,9 @@ def deploy() -> int:
 
 
 def _format_filename(filename: str, line_length: int, check: bool) -> int:
+    """Format a single file.
+
+    Raises PolicySyntaxError for .cf files with syntax errors."""
     if filename.startswith("./."):
         return 0
     if filename.endswith(".json"):
@@ -70,6 +73,14 @@ def _format_dirname(directory: str, line_length: int, check: bool) -> int:
 
 
 def format(names, line_length, check) -> int:
+    try:
+        return _format_inner(names, line_length, check)
+    except PolicySyntaxError as e:
+        print(f"Error: {e}")
+        return 1
+
+
+def _format_inner(names, line_length, check) -> int:
     if not names:
         return _format_dirname(".", line_length, check)
     if len(names) == 1 and names[0] == "-":

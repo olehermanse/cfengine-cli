@@ -39,3 +39,29 @@ if cfengine format --check "$tmpdir/bad2.cf"; then
 fi
 # Verify the file was NOT modified
 diff "$tmpdir/bad2_orig.cf" "$tmpdir/bad2.cf"
+
+# Case 5: format a file with syntax errors -> exit 1, file NOT modified
+printf 'bundle agent { invalid syntax\n' > "$tmpdir/syntax_error.cf"
+cp "$tmpdir/syntax_error.cf" "$tmpdir/syntax_error_orig.cf"
+if cfengine format "$tmpdir/syntax_error.cf"; then
+	echo "FAIL: expected exit code 1 for file with syntax errors"
+	exit 1
+fi
+# Verify the file was NOT modified
+diff "$tmpdir/syntax_error_orig.cf" "$tmpdir/syntax_error.cf"
+
+# Case 6: format from stdin with syntax errors -> exit 1
+if printf 'bundle agent { invalid syntax\n' | cfengine format -; then
+	echo "FAIL: expected exit code 1 for stdin with syntax errors"
+	exit 1
+fi
+
+# Case 7: --check on file with syntax errors -> exit 1, file NOT modified
+printf 'bundle agent { invalid syntax\n' > "$tmpdir/syntax_error2.cf"
+cp "$tmpdir/syntax_error2.cf" "$tmpdir/syntax_error2_orig.cf"
+if cfengine format --check "$tmpdir/syntax_error2.cf"; then
+	echo "FAIL: expected exit code 1 for --check on file with syntax errors"
+	exit 1
+fi
+# Verify the file was NOT modified
+diff "$tmpdir/syntax_error2_orig.cf" "$tmpdir/syntax_error2.cf"
