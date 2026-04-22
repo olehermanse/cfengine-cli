@@ -569,7 +569,7 @@ def _format_remaining_children(
     for child in children:
         if child.type in PROMISER_PARTS:
             continue
-        autoformat(child, fmt, line_length, indent)
+        _autoformat(child, fmt, line_length, indent)
 
 
 # ---------------------------------------------------------------------------
@@ -708,7 +708,7 @@ def _comment_indent(node: Node, indent: int) -> int:
 # ---------------------------------------------------------------------------
 
 
-def autoformat(
+def _autoformat(
     node: Node,
     fmt: Formatter,
     line_length: int,
@@ -757,7 +757,7 @@ def autoformat(
         for child in children:
             if _needs_blank_line_before(child, indent, line_length):
                 fmt.blank_line()
-            autoformat(child, fmt, line_length, indent)
+            _autoformat(child, fmt, line_length, indent)
         return
 
     # Leaf nodes
@@ -796,7 +796,7 @@ def format_policy_file(filename: str, line_length: int, check: bool) -> int:
     check_policy_syntax(tree, filename)
 
     fmt = Formatter()
-    autoformat(root_node, fmt, line_length)
+    _autoformat(root_node, fmt, line_length)
 
     new_data = fmt.buffer + "\n"
     if new_data != original_data.decode("utf-8"):
@@ -828,7 +828,7 @@ def format_policy_fin_fout(
     check_policy_syntax(tree, "<stdin>")
 
     fmt = Formatter()
-    autoformat(root_node, fmt, line_length)
+    _autoformat(root_node, fmt, line_length)
 
     new_data = fmt.buffer + "\n"
     fout.write(new_data)
