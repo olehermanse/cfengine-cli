@@ -97,6 +97,8 @@ def _get_arg_parser():
     parser.add_argument("files", nargs="*")
     parser = dev_subparsers.add_parser("lint-docs")
     parser.add_argument("files", nargs="*")
+    parser = dev_subparsers.add_parser("syntax-tree")
+    parser.add_argument("file", help="CFEngine policy file to print syntax tree for")
     parser = dev_subparsers.add_parser("generate-release-information")
 
     parser.add_argument(

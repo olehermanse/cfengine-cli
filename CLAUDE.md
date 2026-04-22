@@ -29,6 +29,17 @@ When fixing issues, these are usually the files to look at:
 - The implementation of `cfengine format` is in `src/cfengine_cli/format.py`.
 - The implementation of `cfengine lint` is in `src/cfengine_cli/lint.py`.
 
+## Syntax trees
+
+When working on the formatter or the linter, it is often useful to look at the syntax tree of the policy file.
+There is a `dev` subcommand for this:
+
+```bash
+uv run cfengine dev syntax-tree tests/lint/001_hello_world.cf
+```
+
+The command above prints the syntax tree for `tests/lint/001_hello_world.cf` to the terminal (standard output).
+
 ## Test suites
 
 As mentioned above, the `make check` command runs all the tests.

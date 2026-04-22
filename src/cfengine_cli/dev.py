@@ -8,6 +8,7 @@ from cfengine_cli.deptool import (
     print_release_dependency_tables,
 )
 from cfengine_cli.docs import update_docs, check_docs
+from cfengine_cli.syntax_tree import syntax_tree
 
 
 def generate_release_information_command(
@@ -72,6 +73,8 @@ def dispatch_dev_subcommand(subcommand, args) -> int:
         return format_docs(args.files)
     if subcommand == "lint-docs":
         return lint_docs()
+    if subcommand == "syntax-tree":
+        return syntax_tree(args.file)
     if subcommand == "generate-release-information":
         return generate_release_information(
             args.omit_download, args.check_against_git, args.minimum_version
