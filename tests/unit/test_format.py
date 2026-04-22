@@ -18,7 +18,6 @@ from cfengine_cli.format import (
     split_generic_value,
     attempt_split_attribute,
     stringify,
-    can_single_line_promise,
     format_policy_fin_fout,
 )
 
@@ -427,41 +426,6 @@ def test_stringify_non_attribute():
     node = _leaf("identifier", "hello")
     result = stringify(node, 4, 80)
     assert result == ["    hello"]
-
-
-# ---------------------------------------------------------------------------
-# can_single_line_promise
-# ---------------------------------------------------------------------------
-
-
-def test_can_single_line_promise_simple():
-    root = _parse('bundle agent x { vars: "v" string => "hi"; }')
-    promise = _find(root, "promise")
-    assert can_single_line_promise(promise, 4, 80) is True
-
-
-def test_can_single_line_promise_too_long():
-    root = _parse('bundle agent x { vars: "v" string => "hi"; }')
-    promise = _find(root, "promise")
-    assert can_single_line_promise(promise, 4, 10) is False
-
-
-def test_can_single_line_promise_multi_attr():
-    root = _parse('bundle agent x { vars: "v" if => "linux", string => "hi"; }')
-    promise = _find(root, "promise")
-    assert can_single_line_promise(promise, 4, 80) is False
-
-
-def test_can_single_line_promise_with_stakeholder_and_attr():
-    root = _parse('bundle agent x { packages: "p" -> { "a" } comment => "c"; }')
-    promise = _find(root, "promise")
-    assert can_single_line_promise(promise, 4, 200) is False
-
-
-def test_can_single_line_promise_bare_promiser():
-    root = _parse('bundle agent x { packages: "binutils"; }')
-    promise = _find(root, "promise")
-    assert can_single_line_promise(promise, 4, 80) is True
 
 
 # ---------------------------------------------------------------------------

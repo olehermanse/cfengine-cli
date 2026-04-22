@@ -447,7 +447,7 @@ def _has_stakeholder(children: list[Node]) -> bool:
     return any(c.type == "stakeholder" for c in children)
 
 
-def can_single_line_promise(node: Node, indent: int, line_length: int) -> bool:
+def _can_single_line_promise(node: Node, indent: int, line_length: int) -> bool:
     """Check if a promise can be formatted entirely on one line.
 
     Returns False for multi-attribute promises, promises with a
@@ -514,7 +514,7 @@ def _format_promise(
 ) -> bool:
     """Format a promise node. Returns True if handled, False to fall through."""
     # Single-line promise
-    if can_single_line_promise(node, indent, line_length):
+    if _can_single_line_promise(node, indent, line_length):
         prefix = _promiser_line_with_stakeholder(children)
         assert prefix is not None
         attr = next((c for c in children if c.type == "attribute"), None)
@@ -645,8 +645,8 @@ def _needs_blank_line_before(child: Node, indent: int, line_length: int) -> bool
             promise_indent = indent + 2
             both_single = (
                 prev_content.type == "promise"
-                and can_single_line_promise(prev_content, promise_indent, line_length)
-                and can_single_line_promise(child, promise_indent, line_length)
+                and _can_single_line_promise(prev_content, promise_indent, line_length)
+                and _can_single_line_promise(child, promise_indent, line_length)
             )
             return not both_single
 
