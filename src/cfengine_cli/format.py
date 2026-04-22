@@ -311,7 +311,7 @@ def attempt_split_attribute(node: Node, indent: int, line_length: int) -> list[s
     return comment_lines + [" " * indent + stringify_single_line_node(node)]
 
 
-def stringify(node: Node, indent: int, line_length: int) -> list[str]:
+def _stringify(node: Node, indent: int, line_length: int) -> list[str]:
     """Return a node as pre-indented line(s), splitting if it exceeds line_length."""
     single_line = " " * indent + stringify_single_line_node(node)
     # Reserve 1 char for trailing ; or , after attributes
@@ -744,7 +744,7 @@ def _autoformat(
 
     # Attribute — stringify and return
     if node.type == "attribute":
-        fmt.print_lines(stringify(node, indent, line_length), indent=0)
+        fmt.print_lines(_stringify(node, indent, line_length), indent=0)
         return
 
     # Promise — delegate to promise formatter

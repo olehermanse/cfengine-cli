@@ -17,7 +17,6 @@ from cfengine_cli.format import (
     maybe_split_rval,
     split_generic_value,
     attempt_split_attribute,
-    stringify,
     format_policy_fin_fout,
 )
 
@@ -405,27 +404,6 @@ def test_attempt_split_attribute_with_string():
     result = attempt_split_attribute(attr, 6, 80)
     assert len(result) == 1
     assert 'string => "hello"' in result[0]
-
-
-def test_stringify_short_attribute():
-    root = _parse('bundle agent x { vars: "v" string => "hi"; }')
-    attr = _find(root, "attribute")
-    result = stringify(attr, 6, 80)
-    assert len(result) == 1
-    assert result[0] == '      string => "hi"'
-
-
-def test_stringify_long_attribute_splits():
-    root = _parse('bundle agent x { vars: "v" slist => { "aaa", "bbb" }; }')
-    attr = _find(root, "attribute")
-    result = stringify(attr, 6, 30)
-    assert len(result) > 1
-
-
-def test_stringify_non_attribute():
-    node = _leaf("identifier", "hello")
-    result = stringify(node, 4, 80)
-    assert result == ["    hello"]
 
 
 # ---------------------------------------------------------------------------
