@@ -51,7 +51,8 @@ VARS_TYPES = {
     "string",
 }
 PROMISE_BLOCK_ATTRIBUTES = ("path", "interpreter")
-KNOWN_FAULTY_FUNCTION_DEFS = {"regex_replace"}
+KNOWN_FAULTY_FUNCTION_DEFS = {"regex_replace", "peers"}
+# Functions that have known overrides in masterfiles, e.g body with the name regex_replace, conflicting with the function
 
 
 @dataclass
@@ -566,6 +567,7 @@ def _lint_node(
     if state.strict and (
         node.type in ("bundle_block_name", "body_block_name")
         and _text(node) in syntax_data.BUILTIN_FUNCTIONS
+        and _text(node) not in KNOWN_FAULTY_FUNCTION_DEFS
     ):
         _highlight_range(node, lines)
         print(
