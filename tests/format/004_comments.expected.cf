@@ -34,3 +34,14 @@ bundle agent main
         # Inside promise, next to attributes
         string => "value";
 }
+
+bundle agent check
+{
+  methods:
+    "any"
+      # Verify that the custom failsafe.cf did run and created the
+      # file that we removed earlier.
+      usebundle => dcs_passif_fileexists(
+        "$(sys.inputdir)/failsafe_output.txt", "$(this.promise_filename)"
+      );
+}
