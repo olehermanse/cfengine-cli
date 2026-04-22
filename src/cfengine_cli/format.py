@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import IO
 
+import json
+
 import tree_sitter_cfengine as tscfengine
 from tree_sitter import Language, Parser, Node
 from cfbs.pretty import pretty_file, pretty_check_file
@@ -46,10 +48,14 @@ def format_json_file(filename: str, check: bool) -> int:
             print(f"JSON file '{filename}' needs reformatting")
         return int(not success)
 
-    reformatted = pretty_file(filename)
-    if reformatted:
-        print(f"JSON file '{filename}' was reformatted")
-    return 0  # Successfully reformatted or no reformat needed
+    try:
+        reformatted = pretty_file(filename)
+        if reformatted:
+            print(f"JSON file '{filename}' was reformatted")
+        return 0  # Successfully reformatted or no reformat needed
+    except json.decoder.JSONDecodeError as e:
+        print(f"JSON file '{filename}' invalid ({str(e)})")
+        return 1
 
 
 def text(node: Node) -> str:
