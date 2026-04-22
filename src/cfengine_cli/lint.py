@@ -27,12 +27,13 @@ Todos:
   are a bit awkward. Could make iteration nicer.
 """
 
+from copy import deepcopy
 from enum import Enum
 import os
 import json
 from typing import Callable, Iterable
 import tree_sitter_cfengine as tscfengine
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from tree_sitter import Language, Node, Parser, Tree
 from cfbs.validate import validate_config
 from cfbs.cfbs_config import CFBSConfig
@@ -179,6 +180,13 @@ class PolicyFile:
 
         _walk_callback(tree.root_node, visit)
 
+    def __deepcopy__(self, _):
+        """Overrides deepcopy for state-snapshotting.
+        treesitter-tree is not pickleable, and PolicyFile
+        should not change across state snapshots
+        """
+        return self
+
 
 @dataclass
 class State:
@@ -199,6 +207,8 @@ class State:
     promise_type: str | None = None  # "vars" | "files" | "classes" | ... | None
     attribute_name: str | None = None  # "if" | "string" | "slist" | ... | None
     namespace: str = DEFAULT_NAMESPACE  # "ns" | "default" | ... |
+    macro: str | None = None  # "minimum_version()", "else", "between_versions()"
+    old_state: dict = field(default_factory=dict)
     mode: Mode = Mode.NONE
     walking: bool = False
     strict: bool = True
@@ -307,11 +317,14 @@ class State:
             parameters = list(filter(",".__ne__, iter(_text(x) for x in args)))
         else:
             parameters = []
+
         definition = {
             "filename": self.policy_file.filename,
             "line": node.range.start_point[0] + 1,
             "parameters": parameters,
         }
+        if self.macro:
+            definition["macro"] = self.macro
         if name not in definitions:
             definitions[name] = []
         definitions[name].append(definition)
@@ -427,6 +440,22 @@ class State:
             self.block_type = None
             self.block_name = None
             self.promise_type = None
+            return
+
+        if node.type == "macro":
+            macro_type = _text(node)
+            if macro_type.startswith("@if"):
+                self.old_state = deepcopy(self.__dict__)
+                self.macro = macro_type.split(" ")[-1]
+            elif macro_type.startswith("@else"):
+                self.macro = "else"
+                self.old_state = deepcopy(self.__dict__)
+                self.__dict__.update(self.old_state)
+            elif macro_type.startswith("@endif"):
+                self.macro = None
+                self.__dict__.update(self.old_state)
+                # NOTE: this or that? maybe a dict of states based on the macro-type?
+                self.old_state = {}
             return
 
 
@@ -746,7 +775,23 @@ def _lint_node(
                     f"Error: Expected {expected} arguments, received {len(args)} for body '{call}' {location}"
                 )
                 return 1
-
+    if node.type == "half_promise":
+        prev_sib = node.prev_named_sibling
+        while prev_sib and prev_sib.type == "comment":
+            prev_sib = prev_sib.prev_named_sibling
+        prev_type = prev_sib.type if prev_sib else None
+        if not state.macro:
+            _highlight_range(node, lines)
+            print(
+                f"Error: Found promise attribute with no parent-promiser outside of a macro {location}"
+            )
+            return 1
+        elif prev_type != "macro":
+            _highlight_range(node, lines)
+            print(
+                f"Error: Multiple promise attributes with ending semicolon found inside macro '{state.macro}' {location}"
+            )
+            return 1
     return 0
 
 
