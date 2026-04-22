@@ -14,7 +14,6 @@ from cfengine_cli.format import (
     format_policy_fin_fout,
 )
 from cfengine_cli.utils import UserError
-from cfbs.utils import find
 from cfbs.commands import build_command
 from cf_remote.commands import deploy as deploy_command
 
@@ -54,8 +53,6 @@ def _format_filename(filename: str, line_length: int, check: bool) -> int:
     """Format a single file.
 
     Raises PolicySyntaxError for .cf files with syntax errors."""
-    if filename.startswith("./."):
-        return 0
     if filename.endswith(".json"):
         return format_json_file(filename, check)
     if filename.endswith(".cf"):
@@ -65,10 +62,17 @@ def _format_filename(filename: str, line_length: int, check: bool) -> int:
 
 def _format_dirname(directory: str, line_length: int, check: bool) -> int:
     ret = 0
-    for filename in find(directory, extension=".json"):
-        ret |= _format_filename(filename, line_length, check)
-    for filename in find(directory, extension=".cf"):
-        ret |= _format_filename(filename, line_length, check)
+    for root, dirs, files in os.walk(directory):
+        # Don't recurse into hidden folders
+        dirs[:] = [d for d in dirs if not d.startswith(".")]
+        for name in sorted(files):
+            if name.startswith("."):
+                continue  # Hidden files are ignored by default
+            if name.endswith(".x.cf"):
+                continue  # Policy files with intentional mistakes
+            filepath = os.path.join(root, name)
+            if name.endswith(".json") or name.endswith(".cf"):
+                ret |= _format_filename(filepath, line_length, check)
     return ret
 
 
