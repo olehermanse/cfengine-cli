@@ -816,6 +816,8 @@ def _find_filenames_in_arg_folder(arg: str) -> list[str]:
     for root, dirs, files in os.walk(arg, followlinks=True):
         # Remove hidden files:
         files = [f for f in files if not f[0] == "."]
+        # Skip .x.cf files (policy files with intentional errors):
+        files = [f for f in files if not f.endswith(".x.cf")]
         for name in files:
             if name.endswith(LINT_EXTENSIONS):
                 results.append(os.path.join(root, name))

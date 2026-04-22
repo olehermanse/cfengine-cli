@@ -68,6 +68,8 @@ def _format_dirname(directory: str, line_length: int, check: bool) -> int:
     for filename in find(directory, extension=".json"):
         ret |= _format_filename(filename, line_length, check)
     for filename in find(directory, extension=".cf"):
+        if filename.endswith(".x.cf"):
+            continue
         ret |= _format_filename(filename, line_length, check)
     return ret
 
