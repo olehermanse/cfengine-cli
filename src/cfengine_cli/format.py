@@ -280,7 +280,7 @@ def maybe_split_rval(
 # ---------------------------------------------------------------------------
 
 
-def attempt_split_attribute(node: Node, indent: int, line_length: int) -> list[str]:
+def _attempt_split_attribute(node: Node, indent: int, line_length: int) -> list[str]:
     """Split an attribute node, wrapping the rval if it's a list or call."""
     assert len(node.children) >= 3  # lval + arrow + rval + optionally comments
 
@@ -319,7 +319,7 @@ def _stringify(node: Node, indent: int, line_length: int) -> list[str]:
     if len(single_line) < effective_length:
         return [single_line]
     if node.type == "attribute":
-        return attempt_split_attribute(node, indent, line_length - 1)
+        return _attempt_split_attribute(node, indent, line_length - 1)
     return [single_line]
 
 

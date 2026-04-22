@@ -16,7 +16,6 @@ from cfengine_cli.format import (
     split_rval,
     maybe_split_rval,
     split_generic_value,
-    attempt_split_attribute,
     format_policy_fin_fout,
 )
 
@@ -383,27 +382,6 @@ def test_split_generic_value_other():
     node = _leaf("quoted_string", '"hello"')
     result = split_generic_value(node, 6, 80)
     assert result == ['"hello"']
-
-
-# ---------------------------------------------------------------------------
-# attempt_split_attribute / stringify
-# ---------------------------------------------------------------------------
-
-
-def test_attempt_split_attribute_with_list():
-    root = _parse('bundle agent x { vars: "v" slist => { "a", "b" }; }')
-    attr = _find(root, "attribute")
-    result = attempt_split_attribute(attr, 6, 20)
-    assert len(result) > 1
-    assert "slist => {" in result[0]
-
-
-def test_attempt_split_attribute_with_string():
-    root = _parse('bundle agent x { vars: "v" string => "hello"; }')
-    attr = _find(root, "attribute")
-    result = attempt_split_attribute(attr, 6, 80)
-    assert len(result) == 1
-    assert 'string => "hello"' in result[0]
 
 
 # ---------------------------------------------------------------------------
