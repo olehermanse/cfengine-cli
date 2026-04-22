@@ -1035,6 +1035,48 @@ def _lint_json_selector(file: str) -> int:
     return _lint_json_plain(file)
 
 
+# ---------------------------------------------------------------------------
+# Syntax error detection (used by both linter and formatter)
+# ---------------------------------------------------------------------------
+
+
+def _find_first_error(node: Node) -> Node | None:
+    """Find the first ERROR node in the tree, or None if the tree is valid."""
+    if node.type == "ERROR":
+        return node
+    for child in node.children:
+        found = _find_first_error(child)
+        if found:
+            return found
+    return None
+
+
+class PolicySyntaxError(Exception):
+    """Raised when a policy file has syntax errors and cannot be formatted."""
+
+    def __init__(self, filename: str, line: int, column: int):
+        self.filename = filename
+        self.line = line
+        self.column = column
+        super().__init__(f"Syntax error in '{filename}' at {filename}:{line}:{column}")
+
+
+def check_policy_syntax(tree: Tree, filename: str) -> None:
+    """Check a parsed tree for syntax errors.
+
+    Raises PolicySyntaxError if an ERROR node is found.
+
+    Only checks for ERROR nodes, not MISSING nodes — missing tokens like
+    semicolons are handled gracefully by the formatter."""
+    root_node = tree.root_node
+    error_node = _find_first_error(root_node)
+    if not error_node:
+        return
+    line = error_node.range.start_point[0] + 1
+    column = error_node.range.start_point[1] + 1
+    raise PolicySyntaxError(filename, line, column)
+
+
 # Interface: These are the functions we want to be called from outside
 # They create State() and should not be called recursively inside lint.py
 
