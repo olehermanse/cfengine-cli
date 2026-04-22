@@ -1,0 +1,17 @@
+
+      string => $(bar);
+      string => $(bar);
+      ^---------------^
+Error: Found promise attribute with no parent-promiser outside of a macro at tests/lint/017_half_promises.x.cf:6:7
+
+      string => $($(baz));
+      string => $($(baz));
+      ^------------------^
+Error: Multiple promise attributes with ending semicolon found inside macro 'minimum_version(3.18)' at tests/lint/017_half_promises.x.cf:9:7
+
+    # comment
+      string => $($(baz));
+      ^------------------^
+Error: Multiple promise attributes with ending semicolon found inside macro 'else' at tests/lint/017_half_promises.x.cf:26:7
+FAIL: tests/lint/017_half_promises.x.cf (3 errors)
+Failure, 3 errors in total.

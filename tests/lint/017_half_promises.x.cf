@@ -1,0 +1,29 @@
+bundle agent main
+{
+  vars:
+    "string"
+      string => $(bar);
+      string => $(bar);
+@if minimum_version(3.18)
+      string => $($(baz));
+      string => $($(baz));
+@else
+      string => $($(baz));
+@endif
+
+    "string"
+      # comment
+      # comment
+      # comment
+@if minimum_version(3.20)
+      string => $($(baz));
+
+    # comment
+@else
+      string => $($(baz));
+
+    # comment
+      string => $($(baz));
+  # comment
+@endif
+}
