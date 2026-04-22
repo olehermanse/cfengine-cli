@@ -281,18 +281,33 @@ def maybe_split_rval(
 
 def attempt_split_attribute(node: Node, indent: int, line_length: int) -> list[str]:
     """Split an attribute node, wrapping the rval if it's a list or call."""
-    assert len(node.children) == 3
-    lval = node.children[0]
-    arrow = node.children[1]
-    rval = node.children[2]
+    assert len(node.children) >= 3  # lval + arrow + rval + optionally comments
+
+    # Separate comments from the 3 structural children (lval, arrow, rval).
+    # Comments are moved to appear before the attribute.
+    children = []
+    comments = []
+    for child in node.children:
+        if child.type == "comment":
+            comments.append(child)
+        else:
+            children.append(child)
+
+    assert len(children) == 3
+
+    lval = children[0]
+    arrow = children[1]
+    rval = children[2]
+
+    comment_lines = [" " * indent + text(c) for c in comments]
 
     if rval.type == "list" or rval.type == "call":
         prefix = " " * indent + text(lval) + " " + text(arrow) + " "
         offset = len(prefix)
         lines = maybe_split_rval(rval, indent, offset, line_length)
         lines[0] = prefix + lines[0]
-        return lines
-    return [" " * indent + stringify_single_line_node(node)]
+        return comment_lines + lines
+    return comment_lines + [" " * indent + stringify_single_line_node(node)]
 
 
 def stringify(node: Node, indent: int, line_length: int) -> list[str]:
