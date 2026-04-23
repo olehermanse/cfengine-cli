@@ -8,7 +8,7 @@ import re
 import subprocess
 import sys
 
-ACTIVE_BRANCHES = ["3.21.x", "3.24.x", "master"]
+ACTIVE_BRANCHES = ["3.24.x", "3.27.x", "master"]
 
 HUMAN_NAME = {
     "diffutils": "diffutils",
