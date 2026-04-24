@@ -52,7 +52,13 @@ VARS_TYPES = {
 }
 PROMISE_BLOCK_ATTRIBUTES = ("path", "interpreter")
 KNOWN_FAULTY_FUNCTION_DEFS = {"regex_replace", "peers"}
-# Functions that have known overrides in masterfiles, e.g body with the name regex_replace, conflicting with the function
+# Generally, we don't want to allow creating bodies / bundles with the same
+# name as a built in function, as it can make things more confusing
+# (harder to read / understand policy and look up definitions).
+#
+# There are a couple of pre-existing cases that we need to preserve for backwards
+# compatibility - bodies / bundles defined in masterfiles which have the same
+# name as a built in function.
 
 
 @dataclass
