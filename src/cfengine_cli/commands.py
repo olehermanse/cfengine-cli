@@ -68,8 +68,8 @@ def _format_dirname(directory: str, line_length: int, check: bool) -> int:
         for name in sorted(files):
             if name.startswith("."):
                 continue  # Hidden files are ignored by default
-            if name.endswith(".x.cf"):
-                continue  # Policy files with intentional mistakes
+            if name.endswith(".x.cf") or name.endswith(".input.cf"):
+                continue  # Test files skipped during directory traversal
             filepath = os.path.join(root, name)
             if name.endswith(".json") or name.endswith(".cf"):
                 ret |= _format_filename(filepath, line_length, check)
