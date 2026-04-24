@@ -280,7 +280,7 @@ def maybe_split_rval(
 # ---------------------------------------------------------------------------
 
 
-def attempt_split_attribute(node: Node, indent: int, line_length: int) -> list[str]:
+def _attempt_split_attribute(node: Node, indent: int, line_length: int) -> list[str]:
     """Split an attribute node, wrapping the rval if it's a list or call."""
     assert len(node.children) >= 3  # lval + arrow + rval + optionally comments
 
@@ -311,7 +311,7 @@ def attempt_split_attribute(node: Node, indent: int, line_length: int) -> list[s
     return comment_lines + [" " * indent + stringify_single_line_node(node)]
 
 
-def stringify(node: Node, indent: int, line_length: int) -> list[str]:
+def _stringify(node: Node, indent: int, line_length: int) -> list[str]:
     """Return a node as pre-indented line(s), splitting if it exceeds line_length."""
     single_line = " " * indent + stringify_single_line_node(node)
     # Reserve 1 char for trailing ; or , after attributes
@@ -319,7 +319,7 @@ def stringify(node: Node, indent: int, line_length: int) -> list[str]:
     if len(single_line) < effective_length:
         return [single_line]
     if node.type == "attribute":
-        return attempt_split_attribute(node, indent, line_length - 1)
+        return _attempt_split_attribute(node, indent, line_length - 1)
     return [single_line]
 
 
@@ -447,7 +447,7 @@ def _has_stakeholder(children: list[Node]) -> bool:
     return any(c.type == "stakeholder" for c in children)
 
 
-def can_single_line_promise(node: Node, indent: int, line_length: int) -> bool:
+def _can_single_line_promise(node: Node, indent: int, line_length: int) -> bool:
     """Check if a promise can be formatted entirely on one line.
 
     Returns False for multi-attribute promises, promises with a
@@ -514,7 +514,7 @@ def _format_promise(
 ) -> bool:
     """Format a promise node. Returns True if handled, False to fall through."""
     # Single-line promise
-    if can_single_line_promise(node, indent, line_length):
+    if _can_single_line_promise(node, indent, line_length):
         prefix = _promiser_line_with_stakeholder(children)
         assert prefix is not None
         attr = next((c for c in children if c.type == "attribute"), None)
@@ -569,7 +569,7 @@ def _format_remaining_children(
     for child in children:
         if child.type in PROMISER_PARTS:
             continue
-        autoformat(child, fmt, line_length, indent)
+        _autoformat(child, fmt, line_length, indent)
 
 
 # ---------------------------------------------------------------------------
@@ -645,8 +645,8 @@ def _needs_blank_line_before(child: Node, indent: int, line_length: int) -> bool
             promise_indent = indent + 2
             both_single = (
                 prev_content.type == "promise"
-                and can_single_line_promise(prev_content, promise_indent, line_length)
-                and can_single_line_promise(child, promise_indent, line_length)
+                and _can_single_line_promise(prev_content, promise_indent, line_length)
+                and _can_single_line_promise(child, promise_indent, line_length)
             )
             return not both_single
 
@@ -708,7 +708,7 @@ def _comment_indent(node: Node, indent: int) -> int:
 # ---------------------------------------------------------------------------
 
 
-def autoformat(
+def _autoformat(
     node: Node,
     fmt: Formatter,
     line_length: int,
@@ -744,7 +744,7 @@ def autoformat(
 
     # Attribute — stringify and return
     if node.type == "attribute":
-        fmt.print_lines(stringify(node, indent, line_length), indent=0)
+        fmt.print_lines(_stringify(node, indent, line_length), indent=0)
         return
 
     # Promise — delegate to promise formatter
@@ -757,7 +757,7 @@ def autoformat(
         for child in children:
             if _needs_blank_line_before(child, indent, line_length):
                 fmt.blank_line()
-            autoformat(child, fmt, line_length, indent)
+            _autoformat(child, fmt, line_length, indent)
         return
 
     # Leaf nodes
@@ -796,7 +796,7 @@ def format_policy_file(filename: str, line_length: int, check: bool) -> int:
     check_policy_syntax(tree, filename)
 
     fmt = Formatter()
-    autoformat(root_node, fmt, line_length)
+    _autoformat(root_node, fmt, line_length)
 
     new_data = fmt.buffer + "\n"
     if new_data != original_data.decode("utf-8"):
@@ -828,7 +828,7 @@ def format_policy_fin_fout(
     check_policy_syntax(tree, "<stdin>")
 
     fmt = Formatter()
-    autoformat(root_node, fmt, line_length)
+    _autoformat(root_node, fmt, line_length)
 
     new_data = fmt.buffer + "\n"
     fout.write(new_data)
