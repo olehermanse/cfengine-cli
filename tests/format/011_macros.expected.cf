@@ -109,3 +109,84 @@ bundle common cfe_internal_inputs
     any::
       "inputs" slist => getvalues("input");
 }
+
+bundle agent bundle_a
+{
+  vars:
+    "name"
+      slist => {
+@if minimum_version(3.24)
+        "a",
+@else
+        "b",
+@endif
+      };
+}
+
+bundle agent bundle_b
+{
+  vars:
+    "name"
+      string =>
+@if minimum_version(3.24)
+        "a"
+@else
+        "b"
+@endif
+      ;
+}
+
+bundle agent bundle_c
+{
+  vars:
+    "name"
+      slist => {
+@if minimum_version(3.24)
+        # comment
+        "a",
+        # comment
+        # comment
+@else
+        # comment
+        "b",
+        # comment
+        # comment
+@endif
+      };
+}
+
+bundle agent bundle_d
+{
+  vars:
+    "name"
+      slist => {
+@if minimum_version(3.24)
+        # comment
+        "a",
+        # comment
+        "b",
+        # comment
+@else
+        # comment
+        "c",
+        # comment
+        "d",
+        # comment
+@endif
+      };
+}
+
+bundle agent bundle_e
+{
+  vars:
+    "name"
+      slist => {
+@if minimum_version(3.24)
+        "a",
+        "b",
+@else
+        "c",
+        "d",
+@endif
+      };
+}
