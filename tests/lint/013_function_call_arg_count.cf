@@ -1,8 +1,8 @@
 bundle agent main
 {
-vars:
-  "string"
-    string => canonify("test");
-reports:
- "Test => $(string)";
+  vars:
+    "string" string => canonify("test");
+
+  reports:
+    "Test => $(string)";
 }

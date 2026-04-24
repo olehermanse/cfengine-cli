@@ -14,9 +14,11 @@ bundle agent helper
 {
   vars:
     "x" string => isvariable("arg");
+
     "y"
       classes => bundle_class("arg"),
       string => "";
+
   methods:
     "x" usebundle => target("arg");
 }

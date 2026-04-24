@@ -5,11 +5,8 @@ bundle agent foo
       policy => "free",
       real => "11.11";
 
-    "noerr"
-      int => 12;
-
-    "noerr"
-      slist => {};
+    "noerr" int => 12;
+    "noerr" slist => {};
 
     "comment"
       slist => {},
