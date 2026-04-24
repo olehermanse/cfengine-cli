@@ -33,6 +33,20 @@ BLOCK_BODY_TYPES = {"bundle_block_body", "promise_block_body", "body_block_body"
 PROMISER_PARTS = {"promiser", "->", "stakeholder"}
 
 
+def _has_direct_macro(node: Node) -> bool:
+    """Check if any direct child of a node is a macro (non-recursive)."""
+    return any(child.type == "macro" for child in node.children)
+
+
+def _contains_macro(nodes: Node | list[Node]) -> bool:
+    """Check if a node (or any node in a list) is or contains a macro (recursive)."""
+    if isinstance(nodes, list):
+        return any(_contains_macro(node) for node in nodes)
+    if nodes.type == "macro":
+        return True
+    return _contains_macro(nodes.children)
+
+
 def format_json_file(filename: str, check: bool) -> int:
     """Reformat a JSON file in place using cfbs pretty-printer.
 
@@ -192,14 +206,27 @@ def split_generic_value(node: Node, indent: int, line_length: int) -> list[str]:
     return [stringify_single_line_node(node)]
 
 
+def _set_trailing_comma(line: str, add: bool) -> str:
+    """Add or remove a trailing comma from a formatted line."""
+    if add and not line.endswith(","):
+        return line + ","
+    if not add and line.endswith(","):
+        return line[:-1]
+    return line
+
+
 def split_generic_list(
     middle: list[Node], indent: int, line_length: int, trailing_comma: bool = True
 ) -> list[str]:
     """Split list elements into one-per-line strings, each pre-indented."""
+    has_macros = _contains_macro(middle)
     elements: list[str] = []
     for element in middle:
         if elements and element.type == ",":
             elements[-1] = elements[-1] + ","
+            continue
+        if element.type == "macro":
+            elements.append(text(element))
             continue
         line = " " * indent + stringify_single_line_node(element)
         if len(line) < line_length:
@@ -208,16 +235,18 @@ def split_generic_list(
             lines = split_generic_value(element, indent, line_length)
             elements.append(" " * indent + lines[0])
             elements.extend(lines[1:])
-    # Ensure trailing comma state matches the desired setting, on the last
-    # non-comment element (so it doesn't end up after a trailing comment).
-    for i in range(len(elements) - 1, -1, -1):
-        if elements[i].lstrip().startswith("#"):
-            continue
-        if trailing_comma and not elements[i].endswith(","):
-            elements[i] = elements[i] + ","
-        elif not trailing_comma and elements[i].endswith(","):
-            elements[i] = elements[i][:-1]
-        break
+
+    # Adjust trailing commas: with macros, fix every non-macro element
+    # (one per branch); without, fix only the last non-comment element.
+    if has_macros:
+        for i, e in enumerate(elements):
+            if not e.lstrip().startswith(("@", "#")):
+                elements[i] = _set_trailing_comma(e, trailing_comma)
+    else:
+        for i in reversed(range(len(elements))):
+            if not elements[i].lstrip().startswith("#"):
+                elements[i] = _set_trailing_comma(elements[i], trailing_comma)
+                break
     return elements
 
 
@@ -225,9 +254,10 @@ def maybe_split_generic_list(
     nodes: list[Node], indent: int, line_length: int, trailing_comma: bool = True
 ) -> list[str]:
     """Try a single-line rendering; fall back to split_generic_list if too long."""
-    string = " " * indent + stringify_single_line_nodes(nodes)
-    if len(string) < line_length:
-        return [string]
+    if not _contains_macro(nodes):
+        string = " " * indent + stringify_single_line_nodes(nodes)
+        if len(string) < line_length:
+            return [string]
     return split_generic_list(nodes, indent, line_length, trailing_comma)
 
 
@@ -269,6 +299,8 @@ def maybe_split_rval(
     node: Node, indent: int, offset: int, line_length: int
 ) -> list[str]:
     """Return single-line rval if it fits at offset, otherwise split it."""
+    if _contains_macro(node):
+        return split_rval(node, indent, line_length)
     line = stringify_single_line_node(node)
     if len(line) + offset < line_length:
         return [line]
@@ -280,8 +312,33 @@ def maybe_split_rval(
 # ---------------------------------------------------------------------------
 
 
+def _format_attribute_with_macros(node: Node, indent: int) -> list[str]:
+    """Format an attribute whose direct children include macro nodes."""
+    lines: list[str] = []
+    children = node.children
+
+    lval = children[0]
+    arrow = children[1]
+    lines.append(" " * indent + text(lval) + " " + text(arrow))
+
+    for child in children[2:]:
+        if child.type == "macro":
+            lines.append(text(child))
+        elif child.type == "comment":
+            lines.append(" " * (indent + 2) + text(child))
+        else:
+            lines.append(" " * (indent + 2) + stringify_single_line_node(child))
+
+    return lines
+
+
 def _attempt_split_attribute(node: Node, indent: int, line_length: int) -> list[str]:
     """Split an attribute node, wrapping the rval if it's a list or call."""
+    # When macros appear as direct children of the attribute, use
+    # the dedicated macro-aware formatter.
+    if _has_direct_macro(node):
+        return _format_attribute_with_macros(node, indent)
+
     assert len(node.children) >= 3  # lval + arrow + rval + optionally comments
 
     # Separate comments from the 3 structural children (lval, arrow, rval).
@@ -313,6 +370,10 @@ def _attempt_split_attribute(node: Node, indent: int, line_length: int) -> list[
 
 def _stringify(node: Node, indent: int, line_length: int) -> list[str]:
     """Return a node as pre-indented line(s), splitting if it exceeds line_length."""
+    # Attributes containing macros must always be split — macros cannot
+    # appear inline on a single line.
+    if node.type == "attribute" and _contains_macro(node):
+        return _attempt_split_attribute(node, indent, line_length - 1)
     single_line = " " * indent + stringify_single_line_node(node)
     # Reserve 1 char for trailing ; or , after attributes
     effective_length = line_length - 1 if node.type == "attribute" else line_length
@@ -455,6 +516,8 @@ def _can_single_line_promise(node: Node, indent: int, line_length: int) -> bool:
     """
     assert node.type == "promise"
     children = node.children
+    if _contains_macro(children):
+        return False
     attrs = [c for c in children if c.type == "attribute"]
     next_sib = node.next_named_sibling
     while next_sib and next_sib.type == "macro":
@@ -762,7 +825,10 @@ def _autoformat(
 
     # Leaf nodes
     if node.type in {",", ";"}:
-        fmt.print_same_line(node)
+        if previous and previous.type == "macro":
+            fmt.print(node, indent + 2)
+        else:
+            fmt.print_same_line(node)
     elif node.type == "comment":
         if not _is_empty_comment(node):
             fmt.print(node, _comment_indent(node, indent))
