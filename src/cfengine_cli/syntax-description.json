@@ -3350,36 +3350,12 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Years",
-          "range": "0,1000",
-          "type": "int"
-        },
-        {
-          "description": "Months",
-          "range": "0,1000",
-          "type": "int"
-        },
-        {
-          "description": "Days",
-          "range": "0,1000",
-          "type": "int"
-        },
-        {
-          "description": "Hours",
-          "range": "0,1000",
-          "type": "int"
-        },
-        {
-          "description": "Minutes",
-          "range": "0,1000",
-          "type": "int"
-        },
-        {
-          "description": "Seconds",
-          "range": "0,40000",
-          "type": "int"
-        }
+        { "description": "Years", "range": "0,1000", "type": "int" },
+        { "description": "Months", "range": "0,1000", "type": "int" },
+        { "description": "Days", "range": "0,1000", "type": "int" },
+        { "description": "Hours", "range": "0,1000", "type": "int" },
+        { "description": "Minutes", "range": "0,1000", "type": "int" },
+        { "description": "Seconds", "range": "0,40000", "type": "int" }
       ],
       "returnType": "int",
       "status": "normal",
@@ -3390,36 +3366,12 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Years",
-          "range": "0,1000",
-          "type": "int"
-        },
-        {
-          "description": "Months",
-          "range": "0,1000",
-          "type": "int"
-        },
-        {
-          "description": "Days",
-          "range": "0,1000",
-          "type": "int"
-        },
-        {
-          "description": "Hours",
-          "range": "0,1000",
-          "type": "int"
-        },
-        {
-          "description": "Minutes",
-          "range": "0,1000",
-          "type": "int"
-        },
-        {
-          "description": "Seconds",
-          "range": "0,40000",
-          "type": "int"
-        }
+        { "description": "Years", "range": "0,1000", "type": "int" },
+        { "description": "Months", "range": "0,1000", "type": "int" },
+        { "description": "Days", "range": "0,1000", "type": "int" },
+        { "description": "Hours", "range": "0,1000", "type": "int" },
+        { "description": "Minutes", "range": "0,1000", "type": "int" },
+        { "description": "Seconds", "range": "0,40000", "type": "int" }
       ],
       "returnType": "int",
       "status": "normal",
@@ -3442,16 +3394,8 @@
       "maxArgs": 2,
       "minArgs": 1,
       "parameters": [
-        {
-          "description": "File path",
-          "range": ".*",
-          "type": "string"
-        },
-        {
-          "description": "Optional suffix",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "File path", "range": ".*", "type": "string" },
+        { "description": "Optional suffix", "range": ".*", "type": "string" }
       ],
       "returnType": "string",
       "status": "normal",
@@ -3463,11 +3407,7 @@
       "collecting": false,
       "minArgs": 1,
       "parameters": [
-        {
-          "description": "Regular expression",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Regular expression", "range": ".*", "type": "string" }
       ],
       "returnType": "slist",
       "status": "normal",
@@ -3668,11 +3608,7 @@
       "maxArgs": 4,
       "minArgs": 3,
       "parameters": [
-        {
-          "description": "File name",
-          "range": "\"?(/.*)",
-          "type": "string"
-        },
+        { "description": "File name", "range": "\"?(/.*)", "type": "string" },
         {
           "description": "CSV file has heading",
           "range": "true,false,yes,no,on,off",
@@ -3725,11 +3661,7 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Input string",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Input string", "range": ".*", "type": "string" }
       ],
       "returnType": "context",
       "status": "normal",
@@ -3775,11 +3707,7 @@
           "range": ".*",
           "type": "string"
         },
-        {
-          "description": "Filename",
-          "range": "\"?(/.*)",
-          "type": "string"
-        }
+        { "description": "Filename", "range": "\"?(/.*)", "type": "string" }
       ],
       "returnType": "int",
       "status": "normal",
@@ -3880,11 +3808,7 @@
           "range": ".*",
           "type": "string"
         },
-        {
-          "description": "Match string",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Match string", "range": ".*", "type": "string" }
       ],
       "returnType": "data",
       "status": "normal",
@@ -3933,11 +3857,7 @@
       "category": "files",
       "collecting": false,
       "parameters": [
-        {
-          "description": "File path",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "File path", "range": ".*", "type": "string" }
       ],
       "returnType": "string",
       "status": "normal",
@@ -3980,11 +3900,7 @@
       "maxArgs": 3,
       "minArgs": 1,
       "parameters": [
-        {
-          "description": "Input string",
-          "range": ".*",
-          "type": "string"
-        },
+        { "description": "Input string", "range": ".*", "type": "string" },
         {
           "description": "Evaluation type",
           "range": "math,class",
@@ -4256,11 +4172,7 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Filter list",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Filter list", "range": ".*", "type": "string" }
       ],
       "returnType": "data",
       "status": "normal",
@@ -4271,11 +4183,7 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Filter list",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Filter list", "range": ".*", "type": "string" }
       ],
       "returnType": "data",
       "status": "normal",
@@ -4404,11 +4312,7 @@
           "range": ".*",
           "type": "string"
         },
-        {
-          "description": "Return array name",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Return array name", "range": ".*", "type": "string" }
       ],
       "returnType": "int",
       "status": "normal",
@@ -4419,11 +4323,7 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Group name in text",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Group name in text", "range": ".*", "type": "string" }
       ],
       "returnType": "int",
       "status": "normal",
@@ -4488,11 +4388,7 @@
       "category": "system",
       "collecting": false,
       "parameters": [
-        {
-          "description": "User name in text",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "User name in text", "range": ".*", "type": "string" }
       ],
       "returnType": "int",
       "status": "normal",
@@ -4505,11 +4401,7 @@
       "maxArgs": 1,
       "minArgs": 0,
       "parameters": [
-        {
-          "description": "User name in text",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "User name in text", "range": ".*", "type": "string" }
       ],
       "returnType": "data",
       "status": "normal",
@@ -4608,11 +4500,7 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Input text",
-          "range": ".*",
-          "type": "string"
-        },
+        { "description": "Input text", "range": ".*", "type": "string" },
         {
           "description": "Hash or digest algorithm",
           "range": "md5,sha1,sha256,sha384,sha512",
@@ -4678,11 +4566,7 @@
       "category": "communication",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Host name in ascii",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Host name in ascii", "range": ".*", "type": "string" }
       ],
       "returnType": "string",
       "status": "normal",
@@ -4693,11 +4577,7 @@
       "category": "system",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Netgroup name",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Netgroup name", "range": ".*", "type": "string" }
       ],
       "returnType": "context",
       "status": "normal",
@@ -4708,16 +4588,8 @@
       "category": "communication",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Hostname prefix",
-          "range": ".*",
-          "type": "string"
-        },
-        {
-          "description": "Enumerated range",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Hostname prefix", "range": ".*", "type": "string" },
+        { "description": "Enumerated range", "range": ".*", "type": "string" }
       ],
       "returnType": "context",
       "status": "normal",
@@ -4909,11 +4781,7 @@
           "range": ".*",
           "type": "string"
         },
-        {
-          "description": "Type",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Type", "range": ".*", "type": "string" }
       ],
       "returnType": "string",
       "status": "normal",
@@ -4931,11 +4799,7 @@
           "range": ".*",
           "type": "string"
         },
-        {
-          "description": "Port number",
-          "range": ".*",
-          "type": "string"
-        },
+        { "description": "Port number", "range": ".*", "type": "string" },
         {
           "description": "Connection timeout (in seconds)",
           "range": "0,99999999999",
@@ -5072,11 +4936,7 @@
       "category": "files",
       "collecting": false,
       "parameters": [
-        {
-          "description": "File name",
-          "range": "\"?(/.*)",
-          "type": "string"
-        },
+        { "description": "File name", "range": "\"?(/.*)", "type": "string" },
         {
           "description": "Time as a Unix epoch offset",
           "range": "0,99999999999",
@@ -5144,11 +5004,7 @@
       "category": "data",
       "collecting": true,
       "parameters": [
-        {
-          "description": "Join glue-string",
-          "range": ".*",
-          "type": "string"
-        },
+        { "description": "Join glue-string", "range": ".*", "type": "string" },
         {
           "description": "CFEngine variable identifier or inline JSON",
           "range": ".*",
@@ -5164,11 +5020,7 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Input string",
-          "range": ".*",
-          "type": "string"
-        },
+        { "description": "Input string", "range": ".*", "type": "string" },
         {
           "description": "Link separator, e.g. /,:",
           "range": ".*",
@@ -5184,36 +5036,12 @@
       "category": "files",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Years",
-          "range": "0,10000",
-          "type": "int"
-        },
-        {
-          "description": "Months",
-          "range": "0,1000",
-          "type": "int"
-        },
-        {
-          "description": "Days",
-          "range": "0,1000",
-          "type": "int"
-        },
-        {
-          "description": "Hours",
-          "range": "0,1000",
-          "type": "int"
-        },
-        {
-          "description": "Minutes",
-          "range": "0,1000",
-          "type": "int"
-        },
-        {
-          "description": "Seconds",
-          "range": "0,40000",
-          "type": "int"
-        }
+        { "description": "Years", "range": "0,10000", "type": "int" },
+        { "description": "Months", "range": "0,1000", "type": "int" },
+        { "description": "Days", "range": "0,1000", "type": "int" },
+        { "description": "Hours", "range": "0,1000", "type": "int" },
+        { "description": "Minutes", "range": "0,1000", "type": "int" },
+        { "description": "Seconds", "range": "0,40000", "type": "int" }
       ],
       "returnType": "context",
       "status": "normal",
@@ -5224,26 +5052,14 @@
       "category": "communication",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Array name",
-          "range": ".*",
-          "type": "string"
-        },
-        {
-          "description": "URI",
-          "range": ".*",
-          "type": "string"
-        },
+        { "description": "Array name", "range": ".*", "type": "string" },
+        { "description": "URI", "range": ".*", "type": "string" },
         {
           "description": "Distinguished name",
           "range": ".*",
           "type": "string"
         },
-        {
-          "description": "Filter",
-          "range": ".*",
-          "type": "string"
-        },
+        { "description": "Filter", "range": ".*", "type": "string" },
         {
           "description": "Search scope policy",
           "range": "subtree,onelevel,base",
@@ -5264,26 +5080,14 @@
       "category": "communication",
       "collecting": false,
       "parameters": [
-        {
-          "description": "URI",
-          "range": ".*",
-          "type": "string"
-        },
+        { "description": "URI", "range": ".*", "type": "string" },
         {
           "description": "Distinguished name",
           "range": ".*",
           "type": "string"
         },
-        {
-          "description": "Filter",
-          "range": ".*",
-          "type": "string"
-        },
-        {
-          "description": "Record name",
-          "range": ".*",
-          "type": "string"
-        },
+        { "description": "Filter", "range": ".*", "type": "string" },
+        { "description": "Record name", "range": ".*", "type": "string" },
         {
           "description": "Search scope policy",
           "range": "subtree,onelevel,base",
@@ -5304,26 +5108,14 @@
       "category": "communication",
       "collecting": false,
       "parameters": [
-        {
-          "description": "URI",
-          "range": ".*",
-          "type": "string"
-        },
+        { "description": "URI", "range": ".*", "type": "string" },
         {
           "description": "Distinguished name",
           "range": ".*",
           "type": "string"
         },
-        {
-          "description": "Filter",
-          "range": ".*",
-          "type": "string"
-        },
-        {
-          "description": "Record name",
-          "range": ".*",
-          "type": "string"
-        },
+        { "description": "Filter", "range": ".*", "type": "string" },
+        { "description": "Record name", "range": ".*", "type": "string" },
         {
           "description": "Search scope policy",
           "range": "subtree,onelevel,base",
@@ -5563,11 +5355,7 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Class value",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Class value", "range": ".*", "type": "string" }
       ],
       "returnType": "context",
       "status": "normal",
@@ -5607,11 +5395,7 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Year",
-          "range": "1970,3000",
-          "type": "int"
-        },
+        { "description": "Year", "range": "1970,3000", "type": "int" },
         {
           "description": "Month (January = 0)",
           "range": "0,1000",
@@ -5622,21 +5406,9 @@
           "range": "0,1000",
           "type": "int"
         },
-        {
-          "description": "Hour",
-          "range": "0,1000",
-          "type": "int"
-        },
-        {
-          "description": "Minute",
-          "range": "0,1000",
-          "type": "int"
-        },
-        {
-          "description": "Second",
-          "range": "0,1000",
-          "type": "int"
-        }
+        { "description": "Hour", "range": "0,1000", "type": "int" },
+        { "description": "Minute", "range": "0,1000", "type": "int" },
+        { "description": "Second", "range": "0,1000", "type": "int" }
       ],
       "returnType": "int",
       "status": "normal",
@@ -5917,11 +5689,7 @@
           "range": ".*",
           "type": "string"
         },
-        {
-          "description": "Peer group size",
-          "range": "2,64",
-          "type": "int"
-        }
+        { "description": "Peer group size", "range": "2,64", "type": "int" }
       ],
       "returnType": "string",
       "status": "normal",
@@ -5942,11 +5710,7 @@
           "range": ".*",
           "type": "string"
         },
-        {
-          "description": "Peer group size",
-          "range": "2,64",
-          "type": "int"
-        }
+        { "description": "Peer group size", "range": "2,64", "type": "int" }
       ],
       "returnType": "slist",
       "status": "normal",
@@ -5967,11 +5731,7 @@
           "range": ".*",
           "type": "string"
         },
-        {
-          "description": "Peer group size",
-          "range": "2,64",
-          "type": "int"
-        }
+        { "description": "Peer group size", "range": "2,64", "type": "int" }
       ],
       "returnType": "slist",
       "status": "normal",
@@ -6049,11 +5809,7 @@
       "maxArgs": 2,
       "minArgs": 1,
       "parameters": [
-        {
-          "description": "File name",
-          "range": "\"?(/.*)",
-          "type": "string"
-        },
+        { "description": "File name", "range": "\"?(/.*)", "type": "string" },
         {
           "description": "Maximum number of bytes to read",
           "range": "0,99999999999",
@@ -6091,11 +5847,7 @@
       "maxArgs": 2,
       "minArgs": 1,
       "parameters": [
-        {
-          "description": "File name",
-          "range": "\"?(/.*)",
-          "type": "string"
-        },
+        { "description": "File name", "range": "\"?(/.*)", "type": "string" },
         {
           "description": "Maximum number of bytes to read",
           "range": "0,99999999999",
@@ -6113,11 +5865,7 @@
       "maxArgs": 2,
       "minArgs": 1,
       "parameters": [
-        {
-          "description": "File name",
-          "range": "\"?(/.*)",
-          "type": "string"
-        },
+        { "description": "File name", "range": "\"?(/.*)", "type": "string" },
         {
           "description": "Maximum number of bytes to read",
           "range": "0,99999999999",
@@ -6210,11 +5958,7 @@
       "maxArgs": 2,
       "minArgs": 1,
       "parameters": [
-        {
-          "description": "File name",
-          "range": "\"?(/.*)",
-          "type": "string"
-        },
+        { "description": "File name", "range": "\"?(/.*)", "type": "string" },
         {
           "description": "Maximum number of bytes to read",
           "range": "0,99999999999",
@@ -6452,11 +6196,7 @@
       "maxArgs": 2,
       "minArgs": 1,
       "parameters": [
-        {
-          "description": "File name",
-          "range": "\"?(/.*)",
-          "type": "string"
-        },
+        { "description": "File name", "range": "\"?(/.*)", "type": "string" },
         {
           "description": "Maximum number of bytes to read",
           "range": "0,99999999999",
@@ -6477,11 +6217,7 @@
           "range": ".*",
           "type": "string"
         },
-        {
-          "description": "Regular expression",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Regular expression", "range": ".*", "type": "string" }
       ],
       "returnType": "context",
       "status": "normal",
@@ -6497,11 +6233,7 @@
           "range": ".*",
           "type": "string"
         },
-        {
-          "description": "Match string",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Match string", "range": ".*", "type": "string" }
       ],
       "returnType": "context",
       "status": "normal",
@@ -6512,11 +6244,7 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Source string",
-          "range": ".*",
-          "type": "string"
-        },
+        { "description": "Source string", "range": ".*", "type": "string" },
         {
           "description": "Regular expression pattern",
           "range": ".*",
@@ -6547,11 +6275,7 @@
           "range": ".*",
           "type": "string"
         },
-        {
-          "description": "Match string",
-          "range": ".*",
-          "type": "string"
-        },
+        { "description": "Match string", "range": ".*", "type": "string" },
         {
           "description": "Identifier for back-references",
           "range": "[a-zA-Z0-9_$(){}\\[\\].:]+",
@@ -6587,26 +6311,14 @@
       "category": "communication",
       "collecting": false,
       "parameters": [
-        {
-          "description": "URI",
-          "range": ".*",
-          "type": "string"
-        },
+        { "description": "URI", "range": ".*", "type": "string" },
         {
           "description": "Distinguished name",
           "range": ".*",
           "type": "string"
         },
-        {
-          "description": "Filter",
-          "range": ".*",
-          "type": "string"
-        },
-        {
-          "description": "Record name",
-          "range": ".*",
-          "type": "string"
-        },
+        { "description": "Filter", "range": ".*", "type": "string" },
+        { "description": "Record name", "range": ".*", "type": "string" },
         {
           "description": "Search scope policy",
           "range": "subtree,onelevel,base",
@@ -6637,11 +6349,7 @@
           "range": ".*",
           "type": "string"
         },
-        {
-          "description": "Filename to search",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Filename to search", "range": ".*", "type": "string" }
       ],
       "returnType": "context",
       "status": "normal",
@@ -6657,11 +6365,7 @@
           "range": ".*",
           "type": "string"
         },
-        {
-          "description": "Regular expression",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Regular expression", "range": ".*", "type": "string" }
       ],
       "returnType": "context",
       "status": "normal",
@@ -6727,11 +6431,7 @@
       "category": "utils",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Command path",
-          "range": ".+",
-          "type": "string"
-        },
+        { "description": "Command path", "range": ".+", "type": "string" },
         {
           "description": "Shell encapsulation option",
           "range": "noshell,useshell,powershell",
@@ -6819,11 +6519,7 @@
           "range": ".*",
           "type": "string"
         },
-        {
-          "description": "A query string",
-          "range": ".*",
-          "type": "string"
-        },
+        { "description": "A query string", "range": ".*", "type": "string" },
         {
           "description": "A regular expression to match success",
           "range": ".*",
@@ -6854,11 +6550,7 @@
           "range": ".*",
           "type": "string"
         },
-        {
-          "description": "Any seed string",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Any seed string", "range": ".*", "type": "string" }
       ],
       "returnType": "slist",
       "status": "normal",
@@ -6931,16 +6623,8 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "A data string",
-          "range": ".*",
-          "type": "string"
-        },
-        {
-          "description": "Regex to split on",
-          "range": ".*",
-          "type": "string"
-        },
+        { "description": "A data string", "range": ".*", "type": "string" },
+        { "description": "Regex to split on", "range": ".*", "type": "string" },
         {
           "description": "Maximum number of pieces",
           "range": "0,99999999999",
@@ -6971,16 +6655,8 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "String",
-          "range": ".*",
-          "type": "string"
-        },
-        {
-          "description": "String",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "String", "range": ".*", "type": "string" },
+        { "description": "String", "range": ".*", "type": "string" }
       ],
       "returnType": "context",
       "status": "normal",
@@ -6996,11 +6672,7 @@
           "range": "gmtime,localtime",
           "type": "option"
         },
-        {
-          "description": "A format string",
-          "range": ".*",
-          "type": "string"
-        },
+        { "description": "A format string", "range": ".*", "type": "string" },
         {
           "description": "The time as a Unix epoch offset",
           "range": "0,99999999999",
@@ -7031,11 +6703,7 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Input string",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Input string", "range": ".*", "type": "string" }
       ],
       "returnType": "string",
       "status": "normal",
@@ -7046,11 +6714,7 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Input string",
-          "range": ".*",
-          "type": "string"
-        },
+        { "description": "Input string", "range": ".*", "type": "string" },
         {
           "description": "Maximum number of characters to return",
           "range": "-99999999999,99999999999",
@@ -7066,11 +6730,7 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Input string",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Input string", "range": ".*", "type": "string" }
       ],
       "returnType": "int",
       "status": "normal",
@@ -7092,21 +6752,9 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Source string",
-          "range": ".*",
-          "type": "string"
-        },
-        {
-          "description": "String to replace",
-          "range": ".*",
-          "type": "string"
-        },
-        {
-          "description": "Replacement string",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Source string", "range": ".*", "type": "string" },
+        { "description": "String to replace", "range": ".*", "type": "string" },
+        { "description": "Replacement string", "range": ".*", "type": "string" }
       ],
       "returnType": "string",
       "status": "normal",
@@ -7117,11 +6765,7 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Input string",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Input string", "range": ".*", "type": "string" }
       ],
       "returnType": "string",
       "status": "normal",
@@ -7132,16 +6776,8 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "A data string",
-          "range": ".*",
-          "type": "string"
-        },
-        {
-          "description": "Regex to split on",
-          "range": ".*",
-          "type": "string"
-        },
+        { "description": "A data string", "range": ".*", "type": "string" },
+        { "description": "Regex to split on", "range": ".*", "type": "string" },
         {
           "description": "Maximum number of pieces",
           "range": "0,99999999999",
@@ -7157,11 +6793,7 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Input string",
-          "range": ".*",
-          "type": "string"
-        },
+        { "description": "Input string", "range": ".*", "type": "string" },
         {
           "description": "Maximum number of characters to return",
           "range": "-99999999999,99999999999",
@@ -7177,11 +6809,7 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Input string",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Input string", "range": ".*", "type": "string" }
       ],
       "returnType": "string",
       "status": "normal",
@@ -7192,11 +6820,7 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "Input string",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "Input string", "range": ".*", "type": "string" }
       ],
       "returnType": "string",
       "status": "normal",
@@ -7247,11 +6871,7 @@
       "category": "system",
       "collecting": false,
       "parameters": [
-        {
-          "description": "sysctl key",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "sysctl key", "range": ".*", "type": "string" }
       ],
       "returnType": "string",
       "status": "normal",
@@ -7314,11 +6934,7 @@
       "category": "communication",
       "collecting": false,
       "parameters": [
-        {
-          "description": "URL to retrieve",
-          "range": ".*",
-          "type": "string"
-        },
+        { "description": "URL to retrieve", "range": ".*", "type": "string" },
         {
           "description": "CFEngine variable identifier or inline JSON, can be blank",
           "range": ".*",
@@ -7369,16 +6985,8 @@
       "category": "data",
       "collecting": false,
       "parameters": [
-        {
-          "description": "User name",
-          "range": ".*",
-          "type": "string"
-        },
-        {
-          "description": "Group name",
-          "range": ".*",
-          "type": "string"
-        }
+        { "description": "User name", "range": ".*", "type": "string" },
+        { "description": "Group name", "range": ".*", "type": "string" }
       ],
       "returnType": "context",
       "status": "normal",

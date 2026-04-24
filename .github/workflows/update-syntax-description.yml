@@ -31,20 +31,17 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install cf-remote
-          sudo apt-get install npm
-          npm install --global prettier
+          python -m pip install cf-remote cfengine
       - name: Install cfengine
         run: |
           cf-remote --version master download --edition community ubuntu24 amd64 hub
           sudo dpkg -i ~/.cfengine/cf-remote/packages/cfengine-community*.deb
-
       - name: Extract new syntax-description
         run: |
           (
             sudo cf-promises --syntax-description json
           ) > new.json
-          prettier new.json --write
+          cfengine format new.json
       - name: Set Git user
         run: |
           git config user.name 'github-actions[bot]'
@@ -57,7 +54,7 @@ jobs:
             rm new.json
           fi
       - name: Create Pull Request
-        if: env.CHANGES_DETECTED ==  'true'
+        if: env.CHANGES_DETECTED == 'true'
         uses: cfengine/create-pull-request@v6
         with:
           title: Updated syntax-description.json

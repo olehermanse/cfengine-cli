@@ -1,9 +1,9 @@
 bundle agent main
 {
   methods:
-    "test"
-      usebundle => test("a", "b");
+    "test" usebundle => test("a", "b");
 }
+
 bundle agent test(a, b)
 {
   reports:
