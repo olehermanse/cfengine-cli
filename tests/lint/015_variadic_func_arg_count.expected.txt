@@ -1,0 +1,12 @@
+
+    "users3" slist => getusers("a", "b");
+    "users4" slist => getusers("a", "b", "c", "d");
+                      ^--------------------------^
+Error: Expected 0-2 arguments, received 4 for function 'getusers' at tests/lint/015_variadic_func_arg_count.x.cf:7:23
+
+    "file1" string => readfile("/tmp/tmp.txt");
+    "file2" string => readfile("/tmp/tmp.txt", "100", "/tmp/tmp2.txt");
+                      ^----------------------------------------------^
+Error: Expected 1-2 arguments, received 3 for function 'readfile' at tests/lint/015_variadic_func_arg_count.x.cf:9:23
+FAIL: tests/lint/015_variadic_func_arg_count.x.cf (2 errors)
+Failure, 2 errors in total.
