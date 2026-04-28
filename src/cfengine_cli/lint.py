@@ -291,24 +291,30 @@ class State:
         self.walking = False
         self.policy_file = None
 
-    def add_bundle(self, name: str) -> None:
+    def add_bundle(self, name: str, node: Node) -> None:
         """This is called during discovery wherever a bundle is defined.
 
         For example:
         bundle agent my_bundle {}
 
+        We create a dictionary where the key is the qualified name,
+        and the value is a list of all the definitions. This is because the
+        same qualified name can appear multiple times (e.g. inside macro
+        if/else branches). Each definition records the file, line number,
+        and parameter list.
         """
         name = _qualify(name, self.namespace)
-        # TODO: In the future we will record more information than True, like:
-        #       - Can be a list / dict of all places a bundle with that
-        #         qualified name is defined in cases there are duplicates.
-        #       - Can record the location of each definition
-        #       - Can record the parameters / signature
-        #       - Can record whether the bundle is inside a macro
-        #       - Can have a list of classes and vars defined inside
-        self.bundles[name] = {"is_defined": True}
+        assert self.policy_file
+        line = node.range.start_point[0] + 1
+        definition = {
+            "filename": self.policy_file.filename,
+            "line": line,
+        }
+        if name not in self.bundles:
+            self.bundles[name] = []
+        self.bundles[name].append(definition)
 
-    def add_body(self, name: str) -> None:
+    def add_body(self, name: str, node: Node) -> None:
         """This is called during discovery wherever a body is defined.
 
         For example:
@@ -316,9 +322,20 @@ class State:
 
         Control bundles are a special case, so would not be called for:
         body file control {}
+
+        Similar to add_bundles, we record a list of definitions, since
+        each body can be defined multiple times (inside different macros).
         """
         name = _qualify(name, self.namespace)
-        self.bodies[name] = {"is_defined": True}
+        assert self.policy_file
+        line = node.range.start_point[0] + 1
+        definition = {
+            "filename": self.policy_file.filename,
+            "line": line,
+        }
+        if name not in self.bodies:
+            self.bodies[name] = []
+        self.bodies[name].append(definition)
 
     def add_promise_type(self, name: str) -> None:
         """This is called during discovery wherever a custom promise type is
@@ -479,23 +496,23 @@ def _discover_node(node: Node, state: State) -> int:
         name = _text(node)
         if name == "control":
             return 0  # No need to define control blocks
-        state.add_body(name)
+        state.add_body(name, node)
         qualified_name = _qualify(name, state.namespace)
         if (n := node.next_named_sibling) and n.type == "parameter_list":
             _, *args, _ = n.children
             args = list(filter(",".__ne__, iter(_text(x) for x in args)))
-            state.bodies[qualified_name].update({"parameters": args})
+            state.bodies[qualified_name][-1]["parameters"] = args
         return 0
 
     # Define bundles:
     if node.type == "bundle_block_name":
         name = _text(node)
         qualified_name = _qualify(name, state.namespace)
-        state.add_bundle(name)
+        state.add_bundle(name, node)
         if (n := node.next_named_sibling) and n.type == "parameter_list":
             _, *args, _ = n.children
             args = list(filter(",".__ne__, iter(_text(x) for x in args)))
-            state.bundles[qualified_name].update({"parameters": args})
+            state.bundles[qualified_name][-1]["parameters"] = args
         return 0
 
     # Define custom promise types:
@@ -727,19 +744,25 @@ def _lint_node(
 
         qualified_name = _qualify(call, state.namespace)
         if qualified_name in state.bundles:
-            max_args = len(state.bundles[qualified_name].get("parameters", []))
-            if max_args != len(args):
+            definitions = state.bundles[qualified_name]
+            valid_counts = {len(d.get("parameters", [])) for d in definitions}
+            if len(args) not in valid_counts:
                 _highlight_range(node, lines)
+                counts = sorted(valid_counts)
+                expected = " or ".join(str(c) for c in counts)
                 print(
-                    f"Error: Expected {max_args} arguments, received {len(args)} for bundle '{call}' {location}"
+                    f"Error: Expected {expected} arguments, received {len(args)} for bundle '{call}' {location}"
                 )
                 return 1
         if qualified_name in state.bodies:
-            max_args = len(state.bodies[qualified_name].get("parameters", []))
-            if max_args != len(args):
+            definitions = state.bodies[qualified_name]
+            valid_counts = {len(d.get("parameters", [])) for d in definitions}
+            if len(args) not in valid_counts:
                 _highlight_range(node, lines)
+                counts = sorted(valid_counts)
+                expected = " or ".join(str(c) for c in counts)
                 print(
-                    f"Error: Expected {max_args} arguments, received {len(args)} for body '{call}' {location}"
+                    f"Error: Expected {expected} arguments, received {len(args)} for body '{call}' {location}"
                 )
                 return 1
 
