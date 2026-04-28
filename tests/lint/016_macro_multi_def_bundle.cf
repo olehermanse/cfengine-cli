@@ -1,0 +1,25 @@
+@if minimum_version(3.24)
+bundle agent test(a, b)
+{
+  reports:
+    "$(a) and $(b)";
+}
+@else
+bundle agent test(a)
+{
+  reports:
+    "$(a)";
+}
+@endif
+
+bundle agent main
+{
+  methods:
+@if minimum_version(3.24)
+    "test1"
+      usebundle => test("hello", "world");
+@else
+    "test2"
+      usebundle => test("hello");
+@endif
+}
