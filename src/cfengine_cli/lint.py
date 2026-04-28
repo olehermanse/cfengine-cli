@@ -658,6 +658,9 @@ def _lint_node(
         promise_type_data = syntax_data.BUILTIN_PROMISE_TYPES.get(
             state.promise_type, {}
         )
+        if not promise_type_data:
+            # Custom promise type - we cannot validate attribute name here.
+            return 0
         promise_type_attrs = promise_type_data.get("attributes", {})
         if state.attribute_name not in promise_type_attrs:
             _highlight_range(node, lines)
