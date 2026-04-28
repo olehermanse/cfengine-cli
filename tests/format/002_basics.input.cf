@@ -21,11 +21,11 @@ bundle agent main {
 vars:
 # Comment before promise
 "foo"
-if => "bar"
+if => "bar",
 string => "some_value";
 baz::
 "bam"
-if => "bar"
+if => "bar",
 # Comment at atttribute level
 string => "some_value";
 "empty_list"
