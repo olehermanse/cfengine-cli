@@ -291,51 +291,41 @@ class State:
         self.walking = False
         self.policy_file = None
 
-    def add_bundle(self, name: str, node: Node) -> None:
-        """This is called during discovery wherever a bundle is defined.
+    def _add_definition(self, name: str, node: Node, definitions: dict) -> None:
+        """Add a definition (bundle or body) to the given dictionary.
 
-        For example:
-        bundle agent my_bundle {}
-
-        We create a dictionary where the key is the qualified name,
-        and the value is a list of all the definitions. This is because the
-        same qualified name can appear multiple times (e.g. inside macro
-        if/else branches). Each definition records the file, line number,
-        and parameter list.
+        The value for each qualified name is a list of definitions, since
+        the same name can appear multiple times (e.g. inside macro if/else
+        branches). Each definition records the file, line, and parameter
+        list.
         """
         name = _qualify(name, self.namespace)
         assert self.policy_file
-        line = node.range.start_point[0] + 1
+        n = node.next_named_sibling
+        if n and n.type == "parameter_list":
+            _, *args, _ = n.children
+            parameters = list(filter(",".__ne__, iter(_text(x) for x in args)))
+        else:
+            parameters = []
         definition = {
             "filename": self.policy_file.filename,
-            "line": line,
+            "line": node.range.start_point[0] + 1,
+            "parameters": parameters,
         }
-        if name not in self.bundles:
-            self.bundles[name] = []
-        self.bundles[name].append(definition)
+        if name not in definitions:
+            definitions[name] = []
+        definitions[name].append(definition)
+
+    def add_bundle(self, name: str, node: Node) -> None:
+        """This is called during discovery wherever a bundle is defined."""
+        self._add_definition(name, node, self.bundles)
 
     def add_body(self, name: str, node: Node) -> None:
         """This is called during discovery wherever a body is defined.
 
-        For example:
-        body contain my_body {}
-
-        Control bundles are a special case, so would not be called for:
-        body file control {}
-
-        Similar to add_bundles, we record a list of definitions, since
-        each body can be defined multiple times (inside different macros).
+        Control bodies are a special case and should not be passed here.
         """
-        name = _qualify(name, self.namespace)
-        assert self.policy_file
-        line = node.range.start_point[0] + 1
-        definition = {
-            "filename": self.policy_file.filename,
-            "line": line,
-        }
-        if name not in self.bodies:
-            self.bodies[name] = []
-        self.bodies[name].append(definition)
+        self._add_definition(name, node, self.bodies)
 
     def add_promise_type(self, name: str) -> None:
         """This is called during discovery wherever a custom promise type is
@@ -497,27 +487,18 @@ def _discover_node(node: Node, state: State) -> int:
         if name == "control":
             return 0  # No need to define control blocks
         state.add_body(name, node)
-        qualified_name = _qualify(name, state.namespace)
-        if (n := node.next_named_sibling) and n.type == "parameter_list":
-            _, *args, _ = n.children
-            args = list(filter(",".__ne__, iter(_text(x) for x in args)))
-            state.bodies[qualified_name][-1]["parameters"] = args
         return 0
 
     # Define bundles:
     if node.type == "bundle_block_name":
         name = _text(node)
-        qualified_name = _qualify(name, state.namespace)
         state.add_bundle(name, node)
-        if (n := node.next_named_sibling) and n.type == "parameter_list":
-            _, *args, _ = n.children
-            args = list(filter(",".__ne__, iter(_text(x) for x in args)))
-            state.bundles[qualified_name][-1]["parameters"] = args
         return 0
 
     # Define custom promise types:
     if node.type == "promise_block_name":
-        state.add_promise_type(_text(node))
+        name = _text(node)
+        state.add_promise_type(name)
         return 0
 
     return 0
