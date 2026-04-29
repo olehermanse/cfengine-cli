@@ -52,6 +52,7 @@ VARS_TYPES = {
     "string",
 }
 PROMISE_BLOCK_ATTRIBUTES = ("path", "interpreter")
+IMPLIES_BUNDLE = {"usebundle", "servicebundle", "service_bundle"}
 KNOWN_FAULTY_FUNCTION_DEFS = {"regex_replace", "peers"}
 # Generally, we don't want to allow creating bodies / bundles with the same
 # name as a built in function, as it can make things more confusing
@@ -653,7 +654,10 @@ def _lint_node(
             return 1
         if state.strict and (
             qualified_name not in state.bundles
-            and qualified_name not in state.bodies
+            and (
+                state.attribute_name in IMPLIES_BUNDLE
+                or qualified_name not in state.bodies
+            )
             and name not in syntax_data.BUILTIN_FUNCTIONS
         ):
             _highlight_range(node, lines)
@@ -764,7 +768,10 @@ def _lint_node(
                     f"Error: Expected {expected} arguments, received {len(args)} for bundle '{call}' {location}"
                 )
                 return 1
-        if qualified_name in state.bodies:
+        if (
+            qualified_name in state.bodies
+            and state.attribute_name not in IMPLIES_BUNDLE
+        ):
             definitions = state.bodies[qualified_name]
             valid_counts = {len(d.get("parameters", [])) for d in definitions}
             if len(args) not in valid_counts:
