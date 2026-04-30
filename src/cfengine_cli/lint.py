@@ -914,6 +914,14 @@ def _find_filenames_in_arg_folder(arg: str) -> list[str]:
         files = [f for f in files if not f[0] == "."]
         # Skip .x.cf files (policy files with intentional errors):
         files = [f for f in files if not f.endswith(".x.cf")]
+        # Skip test-related JSON files during directory traversal:
+        files = [
+            f
+            for f in files
+            if not f.endswith(
+                (".input.json", ".jqinput.json", ".x.json", ".expected.json")
+            )
+        ]
         for name in files:
             if name.endswith(LINT_EXTENSIONS):
                 results.append(os.path.join(root, name))
