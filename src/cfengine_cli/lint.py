@@ -52,7 +52,14 @@ VARS_TYPES = {
     "string",
 }
 PROMISE_BLOCK_ATTRIBUTES = ("path", "interpreter")
+
 IMPLIES_BUNDLE = {"usebundle", "servicebundle", "service_bundle"}
+IMPLIES_BODY = {"copy_from", "action"}
+# Generally, IMPLIES_BUNDLE and IMPLIES_BODY might not be necessary
+# in the future, when we're using syntax-description.json we will
+# know if we expect a bundle or body (based on both promise type and attribute name)
+# so "guessing" based on only attribute name can be dropped.
+
 KNOWN_FAULTY_FUNCTION_DEFS = {"regex_replace", "peers"}
 # Generally, we don't want to allow creating bodies / bundles with the same
 # name as a built in function, as it can make things more confusing
@@ -652,19 +659,18 @@ def _lint_node(
                 f"Error: Call to bundle '{name}' inside custom promise: '{state.promise_type}' {location}"
             )
             return 1
-        if state.strict and (
-            qualified_name not in state.bundles
-            and (
-                state.attribute_name in IMPLIES_BUNDLE
-                or qualified_name not in state.bodies
+        if state.strict and name not in syntax_data.BUILTIN_FUNCTIONS:
+            allowed_in_bundles = state.attribute_name not in IMPLIES_BODY
+            allowed_in_bodies = state.attribute_name not in IMPLIES_BUNDLE
+            found = (allowed_in_bundles and qualified_name in state.bundles) or (
+                allowed_in_bodies and qualified_name in state.bodies
             )
-            and name not in syntax_data.BUILTIN_FUNCTIONS
-        ):
-            _highlight_range(node, lines)
-            print(
-                f"Error: Call to unknown function / bundle / body '{name}' {location}"
-            )
-            return 1
+            if not found:
+                _highlight_range(node, lines)
+                print(
+                    f"Error: Call to unknown function / bundle / body '{name}' {location}"
+                )
+                return 1
         if (
             name not in syntax_data.BUILTIN_FUNCTIONS
             and state.promise_type == "vars"
@@ -757,7 +763,7 @@ def _lint_node(
                 return 1
 
         qualified_name = _qualify(call, state.namespace)
-        if qualified_name in state.bundles:
+        if qualified_name in state.bundles and state.attribute_name not in IMPLIES_BODY:
             definitions = state.bundles[qualified_name]
             valid_counts = {len(d.get("parameters", [])) for d in definitions}
             if len(args) not in valid_counts:

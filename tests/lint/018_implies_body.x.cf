@@ -1,0 +1,22 @@
+body copy_from mycopy(from, server)
+{
+  source => "$(from)";
+  servers => { "$(server)" };
+}
+
+bundle agent helper(arg)
+{
+  reports:
+    "$(arg)";
+}
+
+bundle agent main
+{
+  files:
+    "/tmp/test1"
+      copy_from => helper("oops");
+    "/tmp/test2"
+      copy_from => unknown_name("oops");
+    "/tmp/test3"
+      copy_from => mycopy("/src");
+}
