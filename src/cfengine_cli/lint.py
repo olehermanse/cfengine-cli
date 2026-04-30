@@ -40,7 +40,7 @@ from cfbs.cfbs_config import CFBSConfig
 from cfbs.utils import find
 from cfengine_cli.utils import UserError
 
-LINT_EXTENSIONS = (".cf", ".json")
+LINT_EXTENSIONS = (".cf", ".cf.sub", ".json")
 DEFAULT_NAMESPACE = "default"
 VARS_TYPES = {
     "data",
@@ -1012,7 +1012,7 @@ def _lint_main(
         if filename.endswith(".json"):
             errors += _lint_json_selector(filename)
             continue
-        assert filename.endswith(".cf")
+        assert filename.endswith((".cf", ".cf.sub"))
         policy_file = PolicyFile(filename, snippet)
         r = _check_syntax(policy_file, state)
         errors += r
