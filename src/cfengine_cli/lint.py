@@ -220,6 +220,8 @@ class State:
     mode: Mode = Mode.NONE
     walking: bool = False
     strict: bool = True
+    inside_call: bool = False  # True when nested inside another call's arguments
+    call_depth: int = 0  # tracks call nesting; inside_call is call_depth > 1
     bundles = {}
     bodies = {}
     custom_promise_types = {}
@@ -434,6 +436,19 @@ class State:
         # Attributes always end with ; in all 3 block types
         if node.type == ";":
             self.attribute_name = None
+            self.call_depth = 0
+            self.inside_call = False
+            return
+
+        # Track call nesting so we can recognize nested calls as built-in
+        # functions even when the attribute name implies bundle/body.
+        if node.type == "call":
+            self.call_depth += 1
+            self.inside_call = self.call_depth > 1
+            return
+        if node.type == ")" and node.parent and node.parent.type == "call":
+            self.call_depth -= 1
+            self.inside_call = self.call_depth > 1
             return
 
         # Clear things when ending a top level block:
@@ -649,9 +664,28 @@ def _lint_node(
     if node.type == "calling_identifier":
         name = _text(node)
         qualified_name = _qualify(name, state.namespace)
+        is_bundle = qualified_name in state.bundles
+        is_body = qualified_name in state.bodies
+        is_function = name in syntax_data.BUILTIN_FUNCTIONS
+
+        if state.inside_call:
+            # Nested calls must be built-in functions - the surrounding
+            # attribute's IMPLIES_BUNDLE/IMPLIES_BODY only applies to the
+            # outermost call.
+            if not is_function:
+                if is_bundle:
+                    error = f"Error: Expected a built-in function but '{name}' is a bundle {location}"
+                elif is_body:
+                    error = f"Error: Expected a built-in function but '{name}' is a body {location}"
+                else:
+                    error = f"Error: Call to unknown function '{name}' {location}"
+                _highlight_range(node, lines)
+                print(error)
+                return 1
+            return 0
         if (
             state.strict
-            and qualified_name in state.bundles
+            and is_bundle
             and state.promise_type in state.custom_promise_types
         ):
             _highlight_range(node, lines)
@@ -662,9 +696,6 @@ def _lint_node(
         if state.strict:
             implies_bundle = state.attribute_name in IMPLIES_BUNDLE
             implies_body = state.attribute_name in IMPLIES_BODY
-            is_bundle = qualified_name in state.bundles
-            is_body = qualified_name in state.bodies
-            is_function = name in syntax_data.BUILTIN_FUNCTIONS
 
             error = None
             if implies_bundle and not is_bundle:
@@ -699,7 +730,7 @@ def _lint_node(
                 print(error)
                 return 1
         if (
-            name not in syntax_data.BUILTIN_FUNCTIONS
+            not is_function
             and state.promise_type == "vars"
             and state.attribute_name not in ("action", "classes")
         ):
@@ -711,7 +742,7 @@ def _lint_node(
         if (
             state.promise_type == "vars"
             and state.attribute_name in ("action", "classes")
-            and qualified_name not in state.bodies
+            and not is_body
         ):
             _highlight_range(node, lines)
             print(
@@ -752,10 +783,12 @@ def _lint_node(
             filter(",".__ne__, iter(_text(x) for x in args if x.type != "comment"))
         )
 
-        if (
-            call in syntax_data.BUILTIN_FUNCTIONS
-            and state.attribute_name not in IMPLIES_BUNDLE
-            and state.attribute_name not in IMPLIES_BODY
+        if call in syntax_data.BUILTIN_FUNCTIONS and (
+            state.inside_call
+            or (
+                state.attribute_name not in IMPLIES_BUNDLE
+                and state.attribute_name not in IMPLIES_BODY
+            )
         ):
             func = syntax_data.BUILTIN_FUNCTIONS.get(call, {})
             variadic = func.get("variadic", True)
@@ -794,7 +827,11 @@ def _lint_node(
                 return 1
 
         qualified_name = _qualify(call, state.namespace)
-        if qualified_name in state.bundles and state.attribute_name not in IMPLIES_BODY:
+        if (
+            not state.inside_call
+            and qualified_name in state.bundles
+            and state.attribute_name not in IMPLIES_BODY
+        ):
             definitions = state.bundles[qualified_name]
             valid_counts = {len(d.get("parameters", [])) for d in definitions}
             if len(args) not in valid_counts:
@@ -807,7 +844,8 @@ def _lint_node(
                 _print_definition_hints("bundle", call, definitions)
                 return 1
         if (
-            qualified_name in state.bodies
+            not state.inside_call
+            and qualified_name in state.bodies
             and state.attribute_name not in IMPLIES_BUNDLE
         ):
             definitions = state.bodies[qualified_name]

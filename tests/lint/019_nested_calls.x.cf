@@ -1,0 +1,24 @@
+body copy_from mycopy(from)
+{
+  source => "$(from)";
+}
+
+bundle agent helper(arg)
+{
+  reports:
+    "$(arg)";
+}
+
+bundle agent main
+{
+  methods:
+    "test1"
+      usebundle => helper(helper("nested-bundle"));
+    "test2"
+      usebundle => helper(mycopy("nested-body"));
+    "test3"
+      usebundle => helper(unknown_name("oops"));
+  files:
+    "/tmp/test4"
+      copy_from => mycopy(unknown_name("oops"));
+}

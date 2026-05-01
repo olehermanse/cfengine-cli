@@ -1,0 +1,22 @@
+
+    "test1"
+      usebundle => helper(helper("nested-bundle"));
+                          ^----^
+Error: Expected a built-in function but 'helper' is a bundle at tests/lint/019_nested_calls.x.cf:16:27
+
+    "test2"
+      usebundle => helper(mycopy("nested-body"));
+                          ^----^
+Error: Expected a built-in function but 'mycopy' is a body at tests/lint/019_nested_calls.x.cf:18:27
+
+    "test3"
+      usebundle => helper(unknown_name("oops"));
+                          ^----------^
+Error: Call to unknown function 'unknown_name' at tests/lint/019_nested_calls.x.cf:20:27
+
+    "/tmp/test4"
+      copy_from => mycopy(unknown_name("oops"));
+                          ^----------^
+Error: Call to unknown function 'unknown_name' at tests/lint/019_nested_calls.x.cf:23:27
+FAIL: tests/lint/019_nested_calls.x.cf (4 errors)
+Failure, 4 errors in total.
