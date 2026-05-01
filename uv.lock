@@ -67,7 +67,7 @@ requires-dist = [
     { name = "cfbs", specifier = ">=5.5.0" },
     { name = "markdown-it-py", specifier = ">=3.0.0" },
     { name = "tree-sitter", specifier = ">=0.25" },
-    { name = "tree-sitter-cfengine", specifier = ">=1.1.10" },
+    { name = "tree-sitter-cfengine", specifier = ">=1.1.11" },
 ]
 
 [package.metadata.requires-dev]
@@ -441,18 +441,18 @@ wheels = [
 
 [[package]]
 name = "tree-sitter-cfengine"
-version = "1.1.10"
+version = "1.1.11"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/75/19/022fbc48243e1766d783d94df10e89ee40bde52a16c25e7b9feaa4fea1bc/tree_sitter_cfengine-1.1.10.tar.gz", hash = "sha256:7047c413f6325d63bb55565571d93a83b438ef3a0046787d0b378d785be75687", size = 16508, upload-time = "2026-04-30T13:29:56.33Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/66/86/a9507198ac34c8ed2abbd340200546c4f1b05da1db455c8a79713c072709/tree_sitter_cfengine-1.1.11.tar.gz", hash = "sha256:03d335c8ba549859e0e96a454949f246800e85d200c0ac9561af8c4b3b773b76", size = 16744, upload-time = "2026-04-30T21:57:31.782Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ae/c5/46e76b6141f961c6822e2466e8940643cfb85acd37057bcf35d15eb93c2e/tree_sitter_cfengine-1.1.10-cp39-abi3-macosx_10_9_x86_64.whl", hash = "sha256:08bfee88922674058c1ba9b5611f62d5f8f745abf85a209e398a9987f5d8484c", size = 12980, upload-time = "2026-04-30T13:29:48.432Z" },
-    { url = "https://files.pythonhosted.org/packages/35/32/a1632d22b5740765beef702746283e3fe5b31781e33e0ce50f4c7e7fe77b/tree_sitter_cfengine-1.1.10-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:f9be7f1aca84714a60ecd3cb141f03c1a86bac4e1893f96337d92021d3053dc1", size = 13598, upload-time = "2026-04-30T13:29:49.743Z" },
-    { url = "https://files.pythonhosted.org/packages/9f/5a/383e9900154e1f53023e7178009564f50301183696fb48be366b826cff70/tree_sitter_cfengine-1.1.10-cp39-abi3-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:06a38b2837ca2456c5c7f518df5d64d0af6430a4d315ea8a374c07dba36c1d34", size = 25355, upload-time = "2026-04-30T13:29:50.758Z" },
-    { url = "https://files.pythonhosted.org/packages/b6/0a/2134943d59eff5e55ac3890809ddaaa4c6909173077d46775d7e869c5377/tree_sitter_cfengine-1.1.10-cp39-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:56fcfe802e1138d594ad082903ca0c5e507b4a71228fe675481f109846289fda", size = 26939, upload-time = "2026-04-30T13:29:51.603Z" },
-    { url = "https://files.pythonhosted.org/packages/1e/1d/d86a60531185a54372b844097bd1775e2b23191dc2610668b74609e178f3/tree_sitter_cfengine-1.1.10-cp39-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:55a64eaa590bdb48748864f8fdf0c61d921996fc7c88f964f04c618288f6b35d", size = 26063, upload-time = "2026-04-30T13:29:52.71Z" },
-    { url = "https://files.pythonhosted.org/packages/60/0b/821560a38f44ac326ea0fc10e432c0105730598fe8b6408b096401153cb9/tree_sitter_cfengine-1.1.10-cp39-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:39b4cab0321a5fedcb6e3cf00bd5a97808df27d357465ea92439af70af690b90", size = 25160, upload-time = "2026-04-30T13:29:53.557Z" },
-    { url = "https://files.pythonhosted.org/packages/c3/b3/0aee297041dcd4895eabcb4528e55912dbc52d5ddf8e483c143b4b2612e2/tree_sitter_cfengine-1.1.10-cp39-abi3-win_amd64.whl", hash = "sha256:054167f608ca71a99f955cdfa806094b8266e1c47219808097bb793f6d692c88", size = 15962, upload-time = "2026-04-30T13:29:54.38Z" },
-    { url = "https://files.pythonhosted.org/packages/82/9f/aa21a2c6bcfaa94df20bd0f3043e7bf10526df6345562fb7b05b028c6a4e/tree_sitter_cfengine-1.1.10-cp39-abi3-win_arm64.whl", hash = "sha256:66ff72d9d0f92a9a734641b441bfb9ee6ff34c582dc3b1b2ac6846c1fc2d427a", size = 14826, upload-time = "2026-04-30T13:29:55.216Z" },
+    { url = "https://files.pythonhosted.org/packages/71/63/3d0bd0cf595b59131e18087be89381f64f3d17e5ddcaf93c3e36cdabdd1b/tree_sitter_cfengine-1.1.11-cp39-abi3-macosx_10_9_x86_64.whl", hash = "sha256:bcb878977f5d6d09768cb5e69b293b1f47dadfe50155724d0032deddf92f76c9", size = 12973, upload-time = "2026-04-30T21:57:24.95Z" },
+    { url = "https://files.pythonhosted.org/packages/9b/2d/76a80aabfe18e27b7cc3e80946b3c7b0a60f2f65deb3ba81d5df8392c7b2/tree_sitter_cfengine-1.1.11-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:e2568a43dabafdceb7d2eb8277f380898fa6f2cfc5118a8f6fffa8e999158bd2", size = 13567, upload-time = "2026-04-30T21:57:25.78Z" },
+    { url = "https://files.pythonhosted.org/packages/fe/db/8743511c594a01e325711ef2e8fb6324d32b7c7a9c5c9f7a2a146b8f72fa/tree_sitter_cfengine-1.1.11-cp39-abi3-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl", hash = "sha256:e36cdc08ea1b37f39e4061fa8261ffd7e46144b16a0f6fe02b4b27dfb1aee33d", size = 24023, upload-time = "2026-04-30T21:57:26.449Z" },
+    { url = "https://files.pythonhosted.org/packages/91/0d/3c176aaf2028dbe47024fb0cc6009a3349976ceff06a969593b2925cb45b/tree_sitter_cfengine-1.1.11-cp39-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:70ccdeb54db00a51f1501ac4d49583c53d9530f8bd6eaa5ffa5fd386d5db3c4c", size = 26415, upload-time = "2026-04-30T21:57:27.366Z" },
+    { url = "https://files.pythonhosted.org/packages/f1/84/0023af45bc76d654e51e3a538120dc30284f6dfd78cbefd9d72366aaca91/tree_sitter_cfengine-1.1.11-cp39-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:505d3f6a7c683bbbe650b2a259cce2dfbd6d1d5d602da4d0077ce0de0cbb9188", size = 25543, upload-time = "2026-04-30T21:57:28.025Z" },
+    { url = "https://files.pythonhosted.org/packages/c4/eb/20b4bfd677e6831ad4cdef6cb0ca494fdae546e86ab253a361e6277df2c7/tree_sitter_cfengine-1.1.11-cp39-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:97bcacccca21bd15db9a4e87a31e55aab5c1755d3c1d90f9304ac40d5d256a02", size = 23781, upload-time = "2026-04-30T21:57:28.788Z" },
+    { url = "https://files.pythonhosted.org/packages/51/c1/44df84907633eb1ed12228268b785b0da98483e2b0314b7d1a4efcbf545c/tree_sitter_cfengine-1.1.11-cp39-abi3-win_amd64.whl", hash = "sha256:37e16ee62cf4b38d86263cb6306313cf0d5542902e4ad770194e08af58e120a5", size = 15974, upload-time = "2026-04-30T21:57:29.831Z" },
+    { url = "https://files.pythonhosted.org/packages/ec/88/c2c9e36e560d1c2494ba8afe3c51aa7df574bd3e5391dacdf4904aa0abe6/tree_sitter_cfengine-1.1.11-cp39-abi3-win_arm64.whl", hash = "sha256:80e82b9659b74f49095b4f26e256b58953da86dfbf586998f9972a852ee59c16", size = 14798, upload-time = "2026-04-30T21:57:30.565Z" },
 ]
 
 [[package]]
