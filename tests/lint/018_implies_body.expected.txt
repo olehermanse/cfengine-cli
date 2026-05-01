@@ -13,5 +13,15 @@ Error: Call to unknown function / bundle / body 'unknown_name' at tests/lint/018
       copy_from => mycopy("/src");
                    ^------------^
 Error: Expected 2 arguments, received 1 for body 'mycopy' at tests/lint/018_implies_body.x.cf:21:20
-FAIL: tests/lint/018_implies_body.x.cf (3 errors)
-Failure, 3 errors in total.
+
+    "/tmp/test4"
+      copy_from => readfile("/etc/file", "100");
+                   ^------^
+Error: Call to unknown function / bundle / body 'readfile' at tests/lint/018_implies_body.x.cf:23:20
+
+    "test5"
+      usebundle => readfile("/etc/file", "100");
+                   ^------^
+Error: Call to unknown function / bundle / body 'readfile' at tests/lint/018_implies_body.x.cf:26:20
+FAIL: tests/lint/018_implies_body.x.cf (5 errors)
+Failure, 5 errors in total.

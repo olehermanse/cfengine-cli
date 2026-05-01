@@ -659,11 +659,16 @@ def _lint_node(
                 f"Error: Call to bundle '{name}' inside custom promise: '{state.promise_type}' {location}"
             )
             return 1
-        if state.strict and name not in syntax_data.BUILTIN_FUNCTIONS:
-            allowed_in_bundles = state.attribute_name not in IMPLIES_BODY
-            allowed_in_bodies = state.attribute_name not in IMPLIES_BUNDLE
-            found = (allowed_in_bundles and qualified_name in state.bundles) or (
-                allowed_in_bodies and qualified_name in state.bodies
+        if state.strict:
+            implies_bundle = state.attribute_name in IMPLIES_BUNDLE
+            implies_body = state.attribute_name in IMPLIES_BODY
+            allowed_in_bundles = not implies_body
+            allowed_in_bodies = not implies_bundle
+            allowed_as_function = not implies_bundle and not implies_body
+            found = (
+                (allowed_in_bundles and qualified_name in state.bundles)
+                or (allowed_in_bodies and qualified_name in state.bodies)
+                or (allowed_as_function and name in syntax_data.BUILTIN_FUNCTIONS)
             )
             if not found:
                 _highlight_range(node, lines)
@@ -725,7 +730,11 @@ def _lint_node(
             filter(",".__ne__, iter(_text(x) for x in args if x.type != "comment"))
         )
 
-        if call in syntax_data.BUILTIN_FUNCTIONS:
+        if (
+            call in syntax_data.BUILTIN_FUNCTIONS
+            and state.attribute_name not in IMPLIES_BUNDLE
+            and state.attribute_name not in IMPLIES_BODY
+        ):
             func = syntax_data.BUILTIN_FUNCTIONS.get(call, {})
             variadic = func.get("variadic", True)
             # variadic meaning variable amount of arguments allowed

@@ -19,4 +19,9 @@ bundle agent main
       copy_from => unknown_name("oops");
     "/tmp/test3"
       copy_from => mycopy("/src");
+    "/tmp/test4"
+      copy_from => readfile("/etc/file", "100");
+  methods:
+    "test5"
+      usebundle => readfile("/etc/file", "100");
 }
