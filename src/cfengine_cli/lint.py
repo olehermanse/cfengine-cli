@@ -570,6 +570,29 @@ def _discover(policy_file: PolicyFile, state: State) -> int:
     state.end_file()
     return 0
 
+
+def _lint_block_name(node: Node, state: State, location: str, syntax_data: SyntaxData):
+    assert node.type in ("bundle_block_name", "body_block_name", "promise_block_name")
+
+    if node.type == "bundle_block_name" and _text(node) != _text(node).lower():
+        raise ValidationError(
+            f"Convention: Bundle name should be lowercase {location}", node
+        )
+    if node.type == "promise_block_name" and _text(node) != _text(node).lower():
+        raise ValidationError(
+            f"Convention: Promise type should be lowercase {location}", node
+        )
+    if state.strict and (
+        node.type in ("bundle_block_name", "body_block_name")
+        and _text(node) in syntax_data.BUILTIN_FUNCTIONS
+        and _text(node) not in KNOWN_FAULTY_FUNCTION_DEFS
+    ):
+        raise ValidationError(
+            f"Error: {'Bundle' if 'bundle' in node.type else 'Body'} '{_text(node)}' conflicts with built-in function with the same name {location}",
+            node,
+        )
+
+
 def _lint_promise(node: Node, state: State, location: str, _syntax_data: SyntaxData):
     assert node.type == "promise"
     if state.promise_type == "vars":
@@ -845,14 +868,6 @@ def _lint_node(
             raise ValidationError(
                 f"Error: Undefined promise type '{promise_type}' {location}", node
             )
-    if node.type == "bundle_block_name" and _text(node) != _text(node).lower():
-        raise ValidationError(
-            f"Convention: Bundle name should be lowercase {location}", node
-        )
-    if node.type == "promise_block_name" and _text(node) != _text(node).lower():
-        raise ValidationError(
-            f"Convention: Promise type should be lowercase {location}", node
-        )
     if (
         node.type == "bundle_block_type"
         and _text(node) not in syntax_data.BUILTIN_BUNDLE_TYPES
@@ -861,15 +876,8 @@ def _lint_node(
             f"Error: Bundle type must be one of ({', '.join(syntax_data.BUILTIN_BUNDLE_TYPES)}), not '{_text(node)}' {location}",
             node,
         )
-    if state.strict and (
-        node.type in ("bundle_block_name", "body_block_name")
-        and _text(node) in syntax_data.BUILTIN_FUNCTIONS
-        and _text(node) not in KNOWN_FAULTY_FUNCTION_DEFS
-    ):
-        raise ValidationError(
-            f"Error: {'Bundle' if 'bundle' in node.type else 'Body'} '{_text(node)}' conflicts with built-in function with the same name {location}",
-            node,
-        )
+    if node.type in ("bundle_block_name", "body_block_name", "promise_block_name"):
+        _lint_block_name(node, state, location, syntax_data)
     if node.type == "promise":
         _lint_promise(node, state, location, syntax_data)
     if node.type == "calling_identifier":
