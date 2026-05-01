@@ -571,6 +571,87 @@ def _discover(policy_file: PolicyFile, state: State) -> int:
     return 0
 
 
+def _lint_call(node: Node, state: State, location: str, syntax_data: SyntaxData):
+    call, _, *args, _ = node.children  # f ( a1 , a2 , a..N )
+    call = _text(call)
+    if call in KNOWN_FAULTY_FUNCTION_DEFS:
+        return
+
+    args = list(filter(",".__ne__, iter(_text(x) for x in args if x.type != "comment")))
+
+    if call in syntax_data.BUILTIN_FUNCTIONS and (
+        state.inside_call
+        or (
+            state.attribute_name not in IMPLIES_BUNDLE
+            and state.attribute_name not in IMPLIES_BODY
+        )
+    ):
+        func = syntax_data.BUILTIN_FUNCTIONS.get(call, {})
+        variadic = func.get("variadic", True)
+        # variadic meaning variable amount of arguments allowed
+        # -1, -1 // default -- all required, aka. non-variadic func
+        # 1, -1  // 1-n
+        # 0, -1  // 0-n
+        # 2, 3   // 2-3
+        min_args = func.get("minArgs", -1)
+        max_args = func.get("maxArgs", -1)
+        if variadic:
+            assert min_args != -1
+            assert min_args != max_args
+            if max_args == -1:
+                max_args = float("inf")  # N args allowed
+        else:
+            assert min_args == -1 and max_args == -1
+            # If min args -1 (meaning all required), max should be the same
+            # All args required, use len of parameter list
+            min_args = max_args = len(func.get("parameters", []))
+
+        if not (min_args <= len(args) <= max_args):
+            argc_str = (
+                f"at least {min_args}"
+                if max_args == float("inf")
+                else (
+                    f"{min_args}-{max_args}" if min_args != max_args else str(max_args)
+                )
+            )
+            raise ValidationError(
+                f"Error: Expected {argc_str} arguments, received {len(args)} for function '{call}' {location}",
+                node,
+            )
+
+    qualified_name = _qualify(call, state.namespace)
+    if (
+        not state.inside_call
+        and qualified_name in state.bundles
+        and state.attribute_name not in IMPLIES_BODY
+    ):
+        definitions = state.bundles[qualified_name]
+        valid_counts = {len(d.get("parameters", [])) for d in definitions}
+        if len(args) not in valid_counts:
+            counts = sorted(valid_counts)
+            expected = " or ".join(str(c) for c in counts)
+            raise ValidationError(
+                f"Error: Expected {expected} arguments, received {len(args)} for bundle '{call}' {location}",
+                node,
+                [_definition_hint("bundle", call, definitions)],
+            )
+    if (
+        not state.inside_call
+        and qualified_name in state.bodies
+        and state.attribute_name not in IMPLIES_BUNDLE
+    ):
+        definitions = state.bodies[qualified_name]
+        valid_counts = {len(d.get("parameters", [])) for d in definitions}
+        if len(args) not in valid_counts:
+            counts = sorted(valid_counts)
+            expected = " or ".join(str(c) for c in counts)
+            raise ValidationError(
+                f"Error: Expected {expected} arguments, received {len(args)} for body '{call}' {location}",
+                node,
+                [_definition_hint("body", call, definitions)],
+            )
+
+
 def _lint_half_promise(node: Node, state: State, location: str):
     assert node.type == "half_promise"
 
@@ -783,88 +864,7 @@ def _lint_node(
             node,
         )
     if node.type == "call":
-        call, _, *args, _ = node.children  # f ( a1 , a2 , a..N )
-        call = _text(call)
-        if call in KNOWN_FAULTY_FUNCTION_DEFS:
-            return
-
-        args = list(
-            filter(",".__ne__, iter(_text(x) for x in args if x.type != "comment"))
-        )
-
-        if call in syntax_data.BUILTIN_FUNCTIONS and (
-            state.inside_call
-            or (
-                state.attribute_name not in IMPLIES_BUNDLE
-                and state.attribute_name not in IMPLIES_BODY
-            )
-        ):
-            func = syntax_data.BUILTIN_FUNCTIONS.get(call, {})
-            variadic = func.get("variadic", True)
-            # variadic meaning variable amount of arguments allowed
-            # -1, -1 // default -- all required, aka. non-variadic func
-            # 1, -1  // 1-n
-            # 0, -1  // 0-n
-            # 2, 3   // 2-3
-            min_args = func.get("minArgs", -1)
-            max_args = func.get("maxArgs", -1)
-            if variadic:
-                assert min_args != -1
-                assert min_args != max_args
-                if max_args == -1:
-                    max_args = float("inf")  # N args allowed
-            else:
-                assert min_args == -1 and max_args == -1
-                # If min args -1 (meaning all required), max should be the same
-                # All args required, use len of parameter list
-                min_args = max_args = len(func.get("parameters", []))
-
-            if not (min_args <= len(args) <= max_args):
-                argc_str = (
-                    f"at least {min_args}"
-                    if max_args == float("inf")
-                    else (
-                        f"{min_args}-{max_args}"
-                        if min_args != max_args
-                        else str(max_args)
-                    )
-                )
-                raise ValidationError(
-                    f"Error: Expected {argc_str} arguments, received {len(args)} for function '{call}' {location}",
-                    node,
-                )
-
-        qualified_name = _qualify(call, state.namespace)
-        if (
-            not state.inside_call
-            and qualified_name in state.bundles
-            and state.attribute_name not in IMPLIES_BODY
-        ):
-            definitions = state.bundles[qualified_name]
-            valid_counts = {len(d.get("parameters", [])) for d in definitions}
-            if len(args) not in valid_counts:
-                counts = sorted(valid_counts)
-                expected = " or ".join(str(c) for c in counts)
-                raise ValidationError(
-                    f"Error: Expected {expected} arguments, received {len(args)} for bundle '{call}' {location}",
-                    node,
-                    [_definition_hint("bundle", call, definitions)],
-                )
-        if (
-            not state.inside_call
-            and qualified_name in state.bodies
-            and state.attribute_name not in IMPLIES_BUNDLE
-        ):
-            definitions = state.bodies[qualified_name]
-            valid_counts = {len(d.get("parameters", [])) for d in definitions}
-            if len(args) not in valid_counts:
-                counts = sorted(valid_counts)
-                expected = " or ".join(str(c) for c in counts)
-                raise ValidationError(
-                    f"Error: Expected {expected} arguments, received {len(args)} for body '{call}' {location}",
-                    node,
-                    [_definition_hint("body", call, definitions)],
-                )
+        _lint_call(node, state, location, syntax_data)
     if node.type == "half_promise":
         _lint_half_promise(node, state, location)
 
