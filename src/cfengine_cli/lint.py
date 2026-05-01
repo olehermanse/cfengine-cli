@@ -570,6 +570,38 @@ def _discover(policy_file: PolicyFile, state: State) -> int:
     state.end_file()
     return 0
 
+def _lint_promise(node: Node, state: State, location: str, _syntax_data: SyntaxData):
+    assert node.type == "promise"
+    if state.promise_type == "vars":
+        attribute_nodes = [x for x in node.children if x.type == "attribute"]
+        # Attributes are children of a promise, and attribute names are children of attributes
+        # Need to iterate inside to find the attribute name (data, ilist, int, etc.)
+        value_nodes = []
+        for attr in attribute_nodes:
+            for child in attr.children:
+                if child.type != "attribute_name":
+                    continue
+                if _text(child) in VARS_TYPES:
+                    # Ignore the other attributes which are not values
+                    value_nodes.append(child)
+
+        if not value_nodes:
+            # None of vars_types were found
+            raise ValidationError(
+                f"Error: Missing value for vars promise {_text(node)[:-1]} {location}",
+                node,
+            )
+
+        if len(value_nodes) > 1:
+            # Too many of vars_types was found
+            # TODO: We could improve _highlight_range to highlight multiple nodes in a nice way
+            nodes = ", ".join([_text(x) for x in value_nodes])
+            raise ValidationError(
+                f"Error: Mutually exclusive attribute values ({nodes})"
+                f" for a single promiser inside vars-promise {location}",
+                value_nodes[-1],
+            )
+
 
 def _lint_calling_identifier(
     node: Node, state: State, location: str, syntax_data: SyntaxData
@@ -838,35 +870,8 @@ def _lint_node(
             f"Error: {'Bundle' if 'bundle' in node.type else 'Body'} '{_text(node)}' conflicts with built-in function with the same name {location}",
             node,
         )
-    if state.promise_type == "vars" and node.type == "promise":
-        attribute_nodes = [x for x in node.children if x.type == "attribute"]
-        # Attributes are children of a promise, and attribute names are children of attributes
-        # Need to iterate inside to find the attribute name (data, ilist, int, etc.)
-        value_nodes = []
-        for attr in attribute_nodes:
-            for child in attr.children:
-                if child.type != "attribute_name":
-                    continue
-                if _text(child) in VARS_TYPES:
-                    # Ignore the other attributes which are not values
-                    value_nodes.append(child)
-
-        if not value_nodes:
-            # None of vars_types were found
-            raise ValidationError(
-                f"Error: Missing value for vars promise {_text(node)[:-1]} {location}",
-                node,
-            )
-
-        if len(value_nodes) > 1:
-            # Too many of vars_types was found
-            # TODO: We could improve _highlight_range to highlight multiple nodes in a nice way
-            nodes = ", ".join([_text(x) for x in value_nodes])
-            raise ValidationError(
-                f"Error: Mutually exclusive attribute values ({nodes})"
-                f" for a single promiser inside vars-promise {location}",
-                value_nodes[-1],
-            )
+    if node.type == "promise":
+        _lint_promise(node, state, location, syntax_data)
     if node.type == "calling_identifier":
         _lint_calling_identifier(node, state, location, syntax_data)
     if node.type == "attribute_name":
