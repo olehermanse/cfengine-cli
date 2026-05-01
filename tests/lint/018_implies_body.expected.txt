@@ -13,6 +13,7 @@ Error: Call to unknown body 'unknown_name' at tests/lint/018_implies_body.x.cf:1
       copy_from => mycopy("/src");
                    ^------------^
 Error: Expected 2 arguments, received 1 for body 'mycopy' at tests/lint/018_implies_body.x.cf:21:20
+Hint: The body 'mycopy' is defined at tests/lint/018_implies_body.x.cf:1:16
 
     "/tmp/test4"
       copy_from => readfile("/etc/file", "100");

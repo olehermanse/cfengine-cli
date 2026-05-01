@@ -3,10 +3,12 @@
       usebundle => test();
                    ^----^
 Error: Expected 1 or 2 arguments, received 0 for bundle 'test' at tests/lint/016_macro_multi_def_bundle.x.cf:20:20
+Hint: The bundle 'test' is defined at tests/lint/016_macro_multi_def_bundle.x.cf:2:14 and tests/lint/016_macro_multi_def_bundle.x.cf:8:14
 
     "test2"
       usebundle => test("hello", "world", "!");
                    ^-------------------------^
 Error: Expected 1 or 2 arguments, received 3 for bundle 'test' at tests/lint/016_macro_multi_def_bundle.x.cf:23:20
+Hint: The bundle 'test' is defined at tests/lint/016_macro_multi_def_bundle.x.cf:2:14 and tests/lint/016_macro_multi_def_bundle.x.cf:8:14
 FAIL: tests/lint/016_macro_multi_def_bundle.x.cf (2 errors)
 Failure, 2 errors in total.

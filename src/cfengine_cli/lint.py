@@ -329,6 +329,7 @@ class State:
         definition = {
             "filename": self.policy_file.filename,
             "line": node.range.start_point[0] + 1,
+            "column": node.range.start_point[1] + 1,
             "parameters": parameters,
         }
         if self.macro:
@@ -803,6 +804,7 @@ def _lint_node(
                 print(
                     f"Error: Expected {expected} arguments, received {len(args)} for bundle '{call}' {location}"
                 )
+                _print_definition_hints("bundle", call, definitions)
                 return 1
         if (
             qualified_name in state.bodies
@@ -817,6 +819,7 @@ def _lint_node(
                 print(
                     f"Error: Expected {expected} arguments, received {len(args)} for body '{call}' {location}"
                 )
+                _print_definition_hints("body", call, definitions)
                 return 1
     if node.type == "half_promise":
         prev_sib = node.prev_named_sibling
@@ -1107,6 +1110,14 @@ def _text(node: Node) -> str:
     in the policy file."""
     assert node.text
     return node.text.decode()
+
+
+def _print_definition_hints(kind: str, name: str, definitions: list[dict]) -> None:
+    """Print a single 'Hint:' line, joining all definition locations with ' and '."""
+    locations = " and ".join(
+        f"{d['filename']}:{d['line']}:{d['column']}" for d in definitions
+    )
+    print(f"Hint: The {kind} '{name}' is defined at {locations}")
 
 
 def _walk_callback(node: Node, callback: Callable[[Node], int]) -> int:
