@@ -571,6 +571,25 @@ def _discover(policy_file: PolicyFile, state: State) -> int:
     return 0
 
 
+def _lint_half_promise(node: Node, state: State, location: str):
+    assert node.type == "half_promise"
+
+    prev_sib = node.prev_named_sibling
+    while prev_sib and prev_sib.type == "comment":
+        prev_sib = prev_sib.prev_named_sibling
+    prev_type = prev_sib.type if prev_sib else None
+    if not state.macro:
+        raise ValidationError(
+            f"Error: Found promise attribute with no parent-promiser outside of a macro {location}",
+            node,
+        )
+    elif prev_type != "macro":
+        raise ValidationError(
+            f"Error: Multiple promise attributes with ending semicolon found inside macro '{state.macro}' {location}",
+            node,
+        )
+
+
 def _lint_node(
     node: Node, policy_file: PolicyFile, state: State, syntax_data: SyntaxData
 ) -> None:
@@ -847,20 +866,7 @@ def _lint_node(
                     [_definition_hint("body", call, definitions)],
                 )
     if node.type == "half_promise":
-        prev_sib = node.prev_named_sibling
-        while prev_sib and prev_sib.type == "comment":
-            prev_sib = prev_sib.prev_named_sibling
-        prev_type = prev_sib.type if prev_sib else None
-        if not state.macro:
-            raise ValidationError(
-                f"Error: Found promise attribute with no parent-promiser outside of a macro {location}",
-                node,
-            )
-        elif prev_type != "macro":
-            raise ValidationError(
-                f"Error: Multiple promise attributes with ending semicolon found inside macro '{state.macro}' {location}",
-                node,
-            )
+        _lint_half_promise(node, state, location)
 
 
 def _pass_fail_filename(filename: str, errors: int) -> str:
