@@ -883,22 +883,37 @@ def _lint_node(
     column = node.range.start_point[1] + 1
     location = state.get_location_extended(line, column)
 
-    if node.type == "promise_guard":
-        _lint_promise_guard(node, state, location, syntax_data)
     if node.type in ("bundle_block_type", "body_block_type", "promise_block_type"):
+        # The type is what comes after body / bundle / promise keyword
+        # and before the name. Ex: common, agent, copy_from, classes
         _lint_block_type(node, state, location, syntax_data)
     if node.type in ("bundle_block_name", "body_block_name", "promise_block_name"):
+        # The name of the bundle, body, or promise type (where it's defined).
         _lint_block_name(node, state, location, syntax_data)
+    if node.type == "promise_guard":
+        # The promise guard is the beginning of a section inside a bundle,
+        # or, in other words, the promise type + one colon
+        _lint_promise_guard(node, state, location, syntax_data)
     if node.type == "promise":
+        # The promise node has the promiser, stakeholder, and all the attributes
+        # inside (as children).
         _lint_promise(node, state, location, syntax_data)
-    if node.type == "calling_identifier":
-        _lint_calling_identifier(node, state, location, syntax_data)
+    if node.type == "half_promise":
+        # A half promise is an artifact of how a macro can split up a promise
+        # into 2 branching parts (3 parts in total).
+        _lint_half_promise(node, state, location)
     if node.type == "attribute_name":
+        # Attribute name nodes refer to all the cases; inside a body, inside
+        # a promise block and inside a bundle (inside a promise).
         _lint_attribute_name(node, state, location, syntax_data)
     if node.type == "call":
+        # A call is a bare name (not inside quotes) plus parentheses,
+        # optionally with arguments inside, or even nested function calls.
         _lint_call(node, state, location, syntax_data)
-    if node.type == "half_promise":
-        _lint_half_promise(node, state, location)
+    if node.type == "calling_identifier":
+        # A calling identifier is the name of the function / body / bundle
+        # that is being called, the part before the parentheses
+        _lint_calling_identifier(node, state, location, syntax_data)
 
 
 def _pass_fail_filename(filename: str, errors: int) -> str:
