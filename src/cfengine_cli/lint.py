@@ -571,6 +571,37 @@ def _discover(policy_file: PolicyFile, state: State) -> int:
     return 0
 
 
+def _lint_attribute_name(
+    node: Node, state: State, location: str, syntax_data: SyntaxData
+):
+    assert node.type == "attribute_name"
+    if _text(node) == "ifvarclass":
+        raise ValidationError(
+            f"Deprecation: Use 'if' instead of 'ifvarclass' {location}", node
+        )
+    if state.promise_type and state.attribute_name:
+        promise_type_data = syntax_data.BUILTIN_PROMISE_TYPES.get(
+            state.promise_type, {}
+        )
+        if not promise_type_data:
+            # Custom promise type - we cannot validate attribute name here.
+            return
+        promise_type_attrs = promise_type_data.get("attributes", {})
+        if state.attribute_name not in promise_type_attrs:
+            raise ValidationError(
+                f"Error: Invalid attribute '{state.attribute_name}' for promise type '{state.promise_type}' {location}",
+                node,
+            )
+    if state.block_keyword == "promise" and state.attribute_name not in (
+        None,
+        *PROMISE_BLOCK_ATTRIBUTES,
+    ):
+        raise ValidationError(
+            f"Error: Invalid attribute name '{state.attribute_name}' in '{state.block_name}' custom promise type definition {location}",
+            node,
+        )
+
+
 def _lint_call(node: Node, state: State, location: str, syntax_data: SyntaxData):
     call, _, *args, _ = node.children  # f ( a1 , a2 , a..N )
     call = _text(call)
@@ -686,10 +717,6 @@ def _lint_node(
     column = node.range.start_point[1] + 1
     location = state.get_location_extended(line, column)
 
-    if node.type == "attribute_name" and _text(node) == "ifvarclass":
-        raise ValidationError(
-            f"Deprecation: Use 'if' instead of 'ifvarclass' {location}", node
-        )
     if node.type == "promise_guard":
         assert _text(node) and len(_text(node)) > 1 and _text(node)[-1] == ":"
         promise_type = _text(node)[0:-1]
@@ -841,28 +868,9 @@ def _lint_node(
                 f"Error: '{name}' is not a defined body. Only bodies may be called with '{state.attribute_name}' {location}",
                 node,
             )
-    if node.type == "attribute_name" and state.promise_type and state.attribute_name:
-        promise_type_data = syntax_data.BUILTIN_PROMISE_TYPES.get(
-            state.promise_type, {}
-        )
-        if not promise_type_data:
-            # Custom promise type - we cannot validate attribute name here.
-            return
-        promise_type_attrs = promise_type_data.get("attributes", {})
-        if state.attribute_name not in promise_type_attrs:
-            raise ValidationError(
-                f"Error: Invalid attribute '{state.attribute_name}' for promise type '{state.promise_type}' {location}",
-                node,
-            )
-    if (
-        state.block_keyword == "promise"
-        and node.type == "attribute_name"
-        and state.attribute_name not in (None, *PROMISE_BLOCK_ATTRIBUTES)
-    ):
-        raise ValidationError(
-            f"Error: Invalid attribute name '{state.attribute_name}' in '{state.block_name}' custom promise type definition {location}",
-            node,
-        )
+
+    if node.type == "attribute_name":
+        _lint_attribute_name(node, state, location, syntax_data)
     if node.type == "call":
         _lint_call(node, state, location, syntax_data)
     if node.type == "half_promise":
