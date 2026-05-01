@@ -571,6 +571,86 @@ def _discover(policy_file: PolicyFile, state: State) -> int:
     return 0
 
 
+def _lint_calling_identifier(
+    node: Node, state: State, location: str, syntax_data: SyntaxData
+):
+    assert node.type == "calling_identifier"
+    name = _text(node)
+    qualified_name = _qualify(name, state.namespace)
+    is_bundle = qualified_name in state.bundles
+    is_body = qualified_name in state.bodies
+    is_function = name in syntax_data.BUILTIN_FUNCTIONS
+
+    if state.inside_call:
+        # Nested calls must be built-in functions - the surrounding
+        # attribute's IMPLIES_BUNDLE/IMPLIES_BODY only applies to the
+        # outermost call.
+        if not is_function:
+            if is_bundle:
+                error = f"Error: Expected a built-in function but '{name}' is a bundle {location}"
+            elif is_body:
+                error = f"Error: Expected a built-in function but '{name}' is a body {location}"
+            else:
+                error = f"Error: Call to unknown function '{name}' {location}"
+            raise ValidationError(error, node)
+        return
+    if state.strict and is_bundle and state.promise_type in state.custom_promise_types:
+        raise ValidationError(
+            f"Error: Call to bundle '{name}' inside custom promise: '{state.promise_type}' {location}",
+            node,
+        )
+    if state.strict:
+        implies_bundle = state.attribute_name in IMPLIES_BUNDLE
+        implies_body = state.attribute_name in IMPLIES_BODY
+
+        error = None
+        if implies_bundle and not is_bundle:
+            if is_body:
+                error = f"Error: Expected a bundle but '{name}' is a body {location}"
+            elif is_function:
+                error = f"Error: Expected a bundle but '{name}' is a built-in function {location}"
+            else:
+                error = f"Error: Call to unknown bundle '{name}' {location}"
+        elif implies_body and not is_body:
+            if is_bundle:
+                error = f"Error: Expected a body but '{name}' is a bundle {location}"
+            elif is_function:
+                error = f"Error: Expected a body but '{name}' is a built-in function {location}"
+            else:
+                error = f"Error: Call to unknown body '{name}' {location}"
+        elif (
+            not implies_bundle
+            and not implies_body
+            and not is_bundle
+            and not is_body
+            and not is_function
+        ):
+            error = (
+                f"Error: Call to unknown function / bundle / body '{name}' {location}"
+            )
+
+        if error:
+            raise ValidationError(error, node)
+    if (
+        not is_function
+        and state.promise_type == "vars"
+        and state.attribute_name not in ("action", "classes")
+    ):
+        raise ValidationError(
+            f"Error: Call to unknown function '{name}' inside 'vars'-promise {location}",
+            node,
+        )
+    if (
+        state.promise_type == "vars"
+        and state.attribute_name in ("action", "classes")
+        and not is_body
+    ):
+        raise ValidationError(
+            f"Error: '{name}' is not a defined body. Only bodies may be called with '{state.attribute_name}' {location}",
+            node,
+        )
+
+
 def _lint_attribute_name(
     node: Node, state: State, location: str, syntax_data: SyntaxData
 ):
@@ -788,87 +868,7 @@ def _lint_node(
                 value_nodes[-1],
             )
     if node.type == "calling_identifier":
-        name = _text(node)
-        qualified_name = _qualify(name, state.namespace)
-        is_bundle = qualified_name in state.bundles
-        is_body = qualified_name in state.bodies
-        is_function = name in syntax_data.BUILTIN_FUNCTIONS
-
-        if state.inside_call:
-            # Nested calls must be built-in functions - the surrounding
-            # attribute's IMPLIES_BUNDLE/IMPLIES_BODY only applies to the
-            # outermost call.
-            if not is_function:
-                if is_bundle:
-                    error = f"Error: Expected a built-in function but '{name}' is a bundle {location}"
-                elif is_body:
-                    error = f"Error: Expected a built-in function but '{name}' is a body {location}"
-                else:
-                    error = f"Error: Call to unknown function '{name}' {location}"
-                raise ValidationError(error, node)
-            return
-        if (
-            state.strict
-            and is_bundle
-            and state.promise_type in state.custom_promise_types
-        ):
-            raise ValidationError(
-                f"Error: Call to bundle '{name}' inside custom promise: '{state.promise_type}' {location}",
-                node,
-            )
-        if state.strict:
-            implies_bundle = state.attribute_name in IMPLIES_BUNDLE
-            implies_body = state.attribute_name in IMPLIES_BODY
-
-            error = None
-            if implies_bundle and not is_bundle:
-                if is_body:
-                    error = (
-                        f"Error: Expected a bundle but '{name}' is a body {location}"
-                    )
-                elif is_function:
-                    error = f"Error: Expected a bundle but '{name}' is a built-in function {location}"
-                else:
-                    error = f"Error: Call to unknown bundle '{name}' {location}"
-            elif implies_body and not is_body:
-                if is_bundle:
-                    error = (
-                        f"Error: Expected a body but '{name}' is a bundle {location}"
-                    )
-                elif is_function:
-                    error = f"Error: Expected a body but '{name}' is a built-in function {location}"
-                else:
-                    error = f"Error: Call to unknown body '{name}' {location}"
-            elif (
-                not implies_bundle
-                and not implies_body
-                and not is_bundle
-                and not is_body
-                and not is_function
-            ):
-                error = f"Error: Call to unknown function / bundle / body '{name}' {location}"
-
-            if error:
-                raise ValidationError(error, node)
-        if (
-            not is_function
-            and state.promise_type == "vars"
-            and state.attribute_name not in ("action", "classes")
-        ):
-            raise ValidationError(
-                f"Error: Call to unknown function '{name}' inside 'vars'-promise {location}",
-                node,
-            )
-        if (
-            state.promise_type == "vars"
-            and state.attribute_name in ("action", "classes")
-            and not is_body
-        ):
-            raise ValidationError(
-                f"Error: '{name}' is not a defined body. Only bodies may be called with '{state.attribute_name}' {location}",
-                node,
-            )
-
+        _lint_calling_identifier(node, state, location, syntax_data)
     if node.type == "attribute_name":
         _lint_attribute_name(node, state, location, syntax_data)
     if node.type == "call":
