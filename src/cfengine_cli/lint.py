@@ -662,19 +662,41 @@ def _lint_node(
         if state.strict:
             implies_bundle = state.attribute_name in IMPLIES_BUNDLE
             implies_body = state.attribute_name in IMPLIES_BODY
-            allowed_in_bundles = not implies_body
-            allowed_in_bodies = not implies_bundle
-            allowed_as_function = not implies_bundle and not implies_body
-            found = (
-                (allowed_in_bundles and qualified_name in state.bundles)
-                or (allowed_in_bodies and qualified_name in state.bodies)
-                or (allowed_as_function and name in syntax_data.BUILTIN_FUNCTIONS)
-            )
-            if not found:
+            is_bundle = qualified_name in state.bundles
+            is_body = qualified_name in state.bodies
+            is_function = name in syntax_data.BUILTIN_FUNCTIONS
+
+            error = None
+            if implies_bundle and not is_bundle:
+                if is_body:
+                    error = (
+                        f"Error: Expected a bundle but '{name}' is a body {location}"
+                    )
+                elif is_function:
+                    error = f"Error: Expected a bundle but '{name}' is a built-in function {location}"
+                else:
+                    error = f"Error: Call to unknown bundle '{name}' {location}"
+            elif implies_body and not is_body:
+                if is_bundle:
+                    error = (
+                        f"Error: Expected a body but '{name}' is a bundle {location}"
+                    )
+                elif is_function:
+                    error = f"Error: Expected a body but '{name}' is a built-in function {location}"
+                else:
+                    error = f"Error: Call to unknown body '{name}' {location}"
+            elif (
+                not implies_bundle
+                and not implies_body
+                and not is_bundle
+                and not is_body
+                and not is_function
+            ):
+                error = f"Error: Call to unknown function / bundle / body '{name}' {location}"
+
+            if error:
                 _highlight_range(node, lines)
-                print(
-                    f"Error: Call to unknown function / bundle / body '{name}' {location}"
-                )
+                print(error)
                 return 1
         if (
             name not in syntax_data.BUILTIN_FUNCTIONS

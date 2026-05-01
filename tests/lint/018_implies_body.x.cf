@@ -23,5 +23,9 @@ bundle agent main
       copy_from => readfile("/etc/file", "100");
   methods:
     "test5"
+      usebundle => mycopy("/src", "host");
+    "test6"
       usebundle => readfile("/etc/file", "100");
+    "test7"
+      usebundle => unknown_bundle("oops");
 }
