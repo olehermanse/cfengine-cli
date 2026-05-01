@@ -496,7 +496,6 @@ def _check_syntax(policy_file: PolicyFile, state: State) -> int:
     state.start_file(policy_file)
     for node in policy_file.nodes:
         state.navigate(node)
-        _discover_node(node, state)
         if node.type != "ERROR":
             continue
         line = node.range.start_point[0] + 1
