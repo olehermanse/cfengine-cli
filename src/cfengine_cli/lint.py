@@ -571,6 +571,26 @@ def _discover(policy_file: PolicyFile, state: State) -> int:
     return 0
 
 
+def _lint_promise_guard(
+    node: Node, state: State, location: str, syntax_data: SyntaxData
+):
+    assert _text(node) and len(_text(node)) > 1 and _text(node)[-1] == ":"
+    promise_type = _text(node)[0:-1]
+    if promise_type in syntax_data.DEPRECATED_PROMISE_TYPES:
+        raise ValidationError(
+            f"Deprecation: Promise type '{promise_type}' is deprecated {location}",
+            node,
+        )
+    if (
+        state.strict
+        and promise_type not in syntax_data.BUILTIN_PROMISE_TYPES
+        and promise_type not in state.custom_promise_types
+    ):
+        raise ValidationError(
+            f"Error: Undefined promise type '{promise_type}' {location}", node
+        )
+
+
 def _lint_block_type(node: Node, state: State, location: str, syntax_data: SyntaxData):
     if (
         node.type == "bundle_block_type"
@@ -864,22 +884,7 @@ def _lint_node(
     location = state.get_location_extended(line, column)
 
     if node.type == "promise_guard":
-        assert _text(node) and len(_text(node)) > 1 and _text(node)[-1] == ":"
-        promise_type = _text(node)[0:-1]
-        if promise_type in syntax_data.DEPRECATED_PROMISE_TYPES:
-            raise ValidationError(
-                f"Deprecation: Promise type '{promise_type}' is deprecated {location}",
-                node,
-            )
-        if (
-            state.strict
-            and promise_type not in syntax_data.BUILTIN_PROMISE_TYPES
-            and promise_type not in state.custom_promise_types
-        ):
-            raise ValidationError(
-                f"Error: Undefined promise type '{promise_type}' {location}", node
-            )
-
+        _lint_promise_guard(node, state, location, syntax_data)
     if node.type in ("bundle_block_type", "body_block_type", "promise_block_type"):
         _lint_block_type(node, state, location, syntax_data)
     if node.type in ("bundle_block_name", "body_block_name", "promise_block_name"):
