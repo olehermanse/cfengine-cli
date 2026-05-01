@@ -78,6 +78,7 @@ class SyntaxData:
     BUILTIN_FUNCTIONS = {}
 
     def __init__(self):
+        """Load the bundled syntax-description.json and derive lookup dicts."""
         self._data_dict = self._load_syntax_description()
         self._derive_syntax_dicts(self._data_dict)
 
@@ -172,6 +173,11 @@ class PolicyFile:
     """
 
     def __init__(self, filename: str, snippet: Snippet | None = None):
+        """Parse the policy file at `filename` and flatten its syntax tree.
+
+        `snippet` is set when the file is a temporary file extracted from a
+        markdown code block, so error messages can refer back to the original.
+        """
         self.filename = filename
         tree, lines, original_data = _parse_policy_file(filename)
         self.tree = tree
@@ -574,6 +580,7 @@ def _discover(policy_file: PolicyFile, state: State) -> int:
 def _lint_promise_guard(
     node: Node, state: State, location: str, syntax_data: SyntaxData
 ):
+    """Check that a promise type guard (e.g. `vars:`) for deprecation or unknown type."""
     assert _text(node) and len(_text(node)) > 1 and _text(node)[-1] == ":"
     promise_type = _text(node)[0:-1]
     if promise_type in syntax_data.DEPRECATED_PROMISE_TYPES:
@@ -592,6 +599,7 @@ def _lint_promise_guard(
 
 
 def _lint_block_type(node: Node, state: State, location: str, syntax_data: SyntaxData):
+    """Check that a block type (e.g. `agent` in `bundle agent main`) is valid."""
     if (
         node.type == "bundle_block_type"
         and _text(node) not in syntax_data.BUILTIN_BUNDLE_TYPES
@@ -603,6 +611,7 @@ def _lint_block_type(node: Node, state: State, location: str, syntax_data: Synta
 
 
 def _lint_block_name(node: Node, state: State, location: str, syntax_data: SyntaxData):
+    """Check that a block name follows conventions and doesn't shadow a built-in."""
     assert node.type in ("bundle_block_name", "body_block_name", "promise_block_name")
 
     if node.type == "bundle_block_name" and _text(node) != _text(node).lower():
@@ -625,6 +634,7 @@ def _lint_block_name(node: Node, state: State, location: str, syntax_data: Synta
 
 
 def _lint_promise(node: Node, state: State, location: str, _syntax_data: SyntaxData):
+    """Check that a vars-promise has exactly one value-typed attribute (string, slist, ...)."""
     assert node.type == "promise"
     if state.promise_type == "vars":
         attribute_nodes = [x for x in node.children if x.type == "attribute"]
@@ -660,6 +670,13 @@ def _lint_promise(node: Node, state: State, location: str, _syntax_data: SyntaxD
 def _lint_calling_identifier(
     node: Node, state: State, location: str, syntax_data: SyntaxData
 ):
+    """Check that a function/bundle/body call name resolves correctly.
+
+    Behavior depends on context: nested calls must be built-in functions,
+    `IMPLIES_BUNDLE` / `IMPLIES_BODY` attributes restrict the kind of
+    definition allowed, and a few rules apply only inside vars-promises and
+    custom promise types.
+    """
     assert node.type == "calling_identifier"
     name = _text(node)
     qualified_name = _qualify(name, state.namespace)
@@ -740,6 +757,8 @@ def _lint_calling_identifier(
 def _lint_attribute_name(
     node: Node, state: State, location: str, syntax_data: SyntaxData
 ):
+    """Check an attribute name for deprecations and validity according to the
+    surrounding promise type."""
     assert node.type == "attribute_name"
     if _text(node) == "ifvarclass":
         raise ValidationError(
@@ -769,6 +788,7 @@ def _lint_attribute_name(
 
 
 def _lint_call(node: Node, state: State, location: str, syntax_data: SyntaxData):
+    """Check a call's argument count against its built-in / bundle / body signature."""
     call, _, *args, _ = node.children  # f ( a1 , a2 , a..N )
     call = _text(call)
     if call in KNOWN_FAULTY_FUNCTION_DEFS:
@@ -850,6 +870,11 @@ def _lint_call(node: Node, state: State, location: str, syntax_data: SyntaxData)
 
 
 def _lint_half_promise(node: Node, state: State, location: str):
+    """Check if a half-promise (a promise split by a macro) is well-formed.
+
+    Half-promises are only valid as macro branches, and only one half-promise
+    is allowed per macro branch.
+    """
     assert node.type == "half_promise"
 
     prev_sib = node.prev_named_sibling
@@ -1011,6 +1036,10 @@ def filter_filenames(filenames: Iterable[str], args: list[str]) -> Iterable[str]
 
 
 def _lint_check_args(args: list[str]):
+    """Validate user-supplied paths exist, are file/folder, and have a supported extension.
+
+    Raises UserError on invalid input.
+    """
     for i, arg in enumerate(args):
         if not os.path.exists(arg):
             raise UserError(f"'{arg}' does not exist")
@@ -1290,6 +1319,7 @@ class PolicySyntaxError(Exception):
     """Raised when a policy file has syntax errors and cannot be formatted."""
 
     def __init__(self, filename: str, line: int, column: int):
+        """Record the location of the syntax error and format a default message."""
         self.filename = filename
         self.line = line
         self.column = column
@@ -1304,6 +1334,7 @@ class ValidationError(Exception):
     """
 
     def __init__(self, message: str, node: Node, hints: list[str] | None = None):
+        """Store the error message, the node to highlight, and any hint lines."""
         self.message = message
         self.node = node
         self.hints = hints or []
@@ -1368,4 +1399,5 @@ def lint_policy_file_snippet(
 
 
 def lint_json(filename: str) -> int:
+    """Lint a single JSON file (cfbs.json gets cfbs validation, others basic parse)."""
     return _lint_json_selector(filename)
