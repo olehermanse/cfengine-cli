@@ -1,0 +1,12 @@
+body copy_from mycopy(from, server)
+{
+  source => "$(from)";
+  servers => { "$(server)" };
+}
+
+bundle agent main
+{
+  files:
+    "/tmp/test"
+      copy_from => mycopy("/src", "host1");
+}

@@ -1,0 +1,17 @@
+
+    "/tmp/test1"
+      copy_from => helper("oops");
+                   ^----^
+Error: Call to unknown function / bundle / body 'helper' at tests/lint/018_implies_body.x.cf:17:20
+
+    "/tmp/test2"
+      copy_from => unknown_name("oops");
+                   ^----------^
+Error: Call to unknown function / bundle / body 'unknown_name' at tests/lint/018_implies_body.x.cf:19:20
+
+    "/tmp/test3"
+      copy_from => mycopy("/src");
+                   ^------------^
+Error: Expected 2 arguments, received 1 for body 'mycopy' at tests/lint/018_implies_body.x.cf:21:20
+FAIL: tests/lint/018_implies_body.x.cf (3 errors)
+Failure, 3 errors in total.
