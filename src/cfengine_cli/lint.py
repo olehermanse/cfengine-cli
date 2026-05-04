@@ -679,6 +679,9 @@ def _lint_calling_identifier(
     """
     assert node.type == "calling_identifier"
     name = _text(node)
+    if name.startswith("$"):
+        # Variable expansion so no point in checking if it's defined
+        return
     qualified_name = _qualify(name, state.namespace)
     is_bundle = qualified_name in state.bundles
     is_body = qualified_name in state.bodies
