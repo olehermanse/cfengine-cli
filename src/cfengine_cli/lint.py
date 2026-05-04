@@ -838,7 +838,8 @@ def _lint_call(node: Node, state: State, location: str, syntax_data: SyntaxData)
 
     qualified_name = _qualify(call, state.namespace)
     if (
-        not state.inside_call
+        state.strict
+        and not state.inside_call
         and qualified_name in state.bundles
         and state.attribute_name not in IMPLIES_BODY
     ):
@@ -853,7 +854,8 @@ def _lint_call(node: Node, state: State, location: str, syntax_data: SyntaxData)
                 [_definition_hint("bundle", call, definitions)],
             )
     if (
-        not state.inside_call
+        state.strict
+        and not state.inside_call
         and qualified_name in state.bodies
         and state.attribute_name not in IMPLIES_BUNDLE
     ):
