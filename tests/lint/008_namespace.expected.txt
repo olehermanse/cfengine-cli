@@ -2,6 +2,6 @@
   methods:
     "x" usebundle => default:target("arg");
                      ^------------^
-Error: Call to unknown function / bundle / body 'default:target' at tests/lint/008_namespace.x.cf:15:22
+Error: Call to unknown bundle 'default:target' at tests/lint/008_namespace.x.cf:15:22
 FAIL: tests/lint/008_namespace.x.cf (1 error)
 Failure, 1 error in total.

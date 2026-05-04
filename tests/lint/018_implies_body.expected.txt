@@ -2,16 +2,37 @@
     "/tmp/test1"
       copy_from => helper("oops");
                    ^----^
-Error: Call to unknown function / bundle / body 'helper' at tests/lint/018_implies_body.x.cf:17:20
+Error: Expected a body but 'helper' is a bundle at tests/lint/018_implies_body.x.cf:17:20
 
     "/tmp/test2"
       copy_from => unknown_name("oops");
                    ^----------^
-Error: Call to unknown function / bundle / body 'unknown_name' at tests/lint/018_implies_body.x.cf:19:20
+Error: Call to unknown body 'unknown_name' at tests/lint/018_implies_body.x.cf:19:20
 
     "/tmp/test3"
       copy_from => mycopy("/src");
                    ^------------^
 Error: Expected 2 arguments, received 1 for body 'mycopy' at tests/lint/018_implies_body.x.cf:21:20
-FAIL: tests/lint/018_implies_body.x.cf (3 errors)
-Failure, 3 errors in total.
+Hint: The body 'mycopy' is defined at tests/lint/018_implies_body.x.cf:1:16
+
+    "/tmp/test4"
+      copy_from => readfile("/etc/file", "100");
+                   ^------^
+Error: Expected a body but 'readfile' is a built-in function at tests/lint/018_implies_body.x.cf:23:20
+
+    "test5"
+      usebundle => mycopy("/src", "host");
+                   ^----^
+Error: Expected a bundle but 'mycopy' is a body at tests/lint/018_implies_body.x.cf:26:20
+
+    "test6"
+      usebundle => readfile("/etc/file", "100");
+                   ^------^
+Error: Expected a bundle but 'readfile' is a built-in function at tests/lint/018_implies_body.x.cf:28:20
+
+    "test7"
+      usebundle => unknown_bundle("oops");
+                   ^------------^
+Error: Call to unknown bundle 'unknown_bundle' at tests/lint/018_implies_body.x.cf:30:20
+FAIL: tests/lint/018_implies_body.x.cf (7 errors)
+Failure, 7 errors in total.

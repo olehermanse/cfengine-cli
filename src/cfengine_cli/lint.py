@@ -78,6 +78,7 @@ class SyntaxData:
     BUILTIN_FUNCTIONS = {}
 
     def __init__(self):
+        """Load the bundled syntax-description.json and derive lookup dicts."""
         self._data_dict = self._load_syntax_description()
         self._derive_syntax_dicts(self._data_dict)
 
@@ -172,6 +173,11 @@ class PolicyFile:
     """
 
     def __init__(self, filename: str, snippet: Snippet | None = None):
+        """Parse the policy file at `filename` and flatten its syntax tree.
+
+        `snippet` is set when the file is a temporary file extracted from a
+        markdown code block, so error messages can refer back to the original.
+        """
         self.filename = filename
         tree, lines, original_data = _parse_policy_file(filename)
         self.tree = tree
@@ -220,6 +226,8 @@ class State:
     mode: Mode = Mode.NONE
     walking: bool = False
     strict: bool = True
+    inside_call: bool = False  # True when nested inside another call's arguments
+    call_depth: int = 0  # tracks call nesting; inside_call is call_depth > 1
     bundles = {}
     bodies = {}
     custom_promise_types = {}
@@ -329,6 +337,7 @@ class State:
         definition = {
             "filename": self.policy_file.filename,
             "line": node.range.start_point[0] + 1,
+            "column": node.range.start_point[1] + 1,
             "parameters": parameters,
         }
         if self.macro:
@@ -433,6 +442,19 @@ class State:
         # Attributes always end with ; in all 3 block types
         if node.type == ";":
             self.attribute_name = None
+            self.call_depth = 0
+            self.inside_call = False
+            return
+
+        # Track call nesting so we can recognize nested calls as built-in
+        # functions even when the attribute name implies bundle/body.
+        if node.type == "call":
+            self.call_depth += 1
+            self.inside_call = self.call_depth > 1
+            return
+        if node.type == ")" and node.parent and node.parent.type == "call":
+            self.call_depth -= 1
+            self.inside_call = self.call_depth > 1
             return
 
         # Clear things when ending a top level block:
@@ -496,7 +518,6 @@ def _check_syntax(policy_file: PolicyFile, state: State) -> int:
     state.start_file(policy_file)
     for node in policy_file.nodes:
         state.navigate(node)
-        _discover_node(node, state)
         if node.type != "ERROR":
             continue
         line = node.range.start_point[0] + 1
@@ -556,66 +577,66 @@ def _discover(policy_file: PolicyFile, state: State) -> int:
     return 0
 
 
-def _lint_node(
-    node: Node, policy_file: PolicyFile, state: State, syntax_data: SyntaxData
-) -> int:
-    """Checks we run on each node in the syntax tree,
-    utilizes state for checks which require context."""
+def _lint_promise_guard(
+    node: Node, state: State, location: str, syntax_data: SyntaxData
+):
+    """Check that a promise type guard (e.g. `vars:`) for deprecation or unknown type."""
+    assert _text(node) and len(_text(node)) > 1 and _text(node)[-1] == ":"
+    promise_type = _text(node)[0:-1]
+    if promise_type in syntax_data.DEPRECATED_PROMISE_TYPES:
+        raise ValidationError(
+            f"Deprecation: Promise type '{promise_type}' is deprecated {location}",
+            node,
+        )
+    if (
+        state.strict
+        and promise_type not in syntax_data.BUILTIN_PROMISE_TYPES
+        and promise_type not in state.custom_promise_types
+    ):
+        raise ValidationError(
+            f"Error: Undefined promise type '{promise_type}' {location}", node
+        )
 
-    lines = policy_file.lines
-    line = node.range.start_point[0] + 1
-    column = node.range.start_point[1] + 1
-    location = state.get_location_extended(line, column)
 
-    if node.type == "attribute_name" and _text(node) == "ifvarclass":
-        _highlight_range(node, lines)
-        print(f"Deprecation: Use 'if' instead of 'ifvarclass' {location}")
-        return 1
-    if node.type == "promise_guard":
-        assert _text(node) and len(_text(node)) > 1 and _text(node)[-1] == ":"
-        promise_type = _text(node)[0:-1]
-        if promise_type in syntax_data.DEPRECATED_PROMISE_TYPES:
-            _highlight_range(node, lines)
-            print(
-                f"Deprecation: Promise type '{promise_type}' is deprecated {location}"
-            )
-            return 1
-        if (
-            state.strict
-            and promise_type not in syntax_data.BUILTIN_PROMISE_TYPES
-            and promise_type not in state.custom_promise_types
-        ):
-            _highlight_range(node, lines)
-            print(f"Error: Undefined promise type '{promise_type}' {location}")
-            return 1
-    if node.type == "bundle_block_name" and _text(node) != _text(node).lower():
-        _highlight_range(node, lines)
-        print(f"Convention: Bundle name should be lowercase {location}")
-        return 1
-    if node.type == "promise_block_name" and _text(node) != _text(node).lower():
-        _highlight_range(node, lines)
-        print(f"Convention: Promise type should be lowercase {location}")
-        return 1
+def _lint_block_type(node: Node, state: State, location: str, syntax_data: SyntaxData):
+    """Check that a block type (e.g. `agent` in `bundle agent main`) is valid."""
     if (
         node.type == "bundle_block_type"
         and _text(node) not in syntax_data.BUILTIN_BUNDLE_TYPES
     ):
-        _highlight_range(node, lines)
-        print(
-            f"Error: Bundle type must be one of ({', '.join(syntax_data.BUILTIN_BUNDLE_TYPES)}), not '{_text(node)}' {location}"
+        raise ValidationError(
+            f"Error: Bundle type must be one of ({', '.join(syntax_data.BUILTIN_BUNDLE_TYPES)}), not '{_text(node)}' {location}",
+            node,
         )
-        return 1
+
+
+def _lint_block_name(node: Node, state: State, location: str, syntax_data: SyntaxData):
+    """Check that a block name follows conventions and doesn't shadow a built-in."""
+    assert node.type in ("bundle_block_name", "body_block_name", "promise_block_name")
+
+    if node.type == "bundle_block_name" and _text(node) != _text(node).lower():
+        raise ValidationError(
+            f"Convention: Bundle name should be lowercase {location}", node
+        )
+    if node.type == "promise_block_name" and _text(node) != _text(node).lower():
+        raise ValidationError(
+            f"Convention: Promise type should be lowercase {location}", node
+        )
     if state.strict and (
         node.type in ("bundle_block_name", "body_block_name")
         and _text(node) in syntax_data.BUILTIN_FUNCTIONS
         and _text(node) not in KNOWN_FAULTY_FUNCTION_DEFS
     ):
-        _highlight_range(node, lines)
-        print(
-            f"Error: {'Bundle' if 'bundle' in node.type else 'Body'} '{_text(node)}' conflicts with built-in function with the same name {location}"
+        raise ValidationError(
+            f"Error: {'Bundle' if 'bundle' in node.type else 'Body'} '{_text(node)}' conflicts with built-in function with the same name {location}",
+            node,
         )
-        return 1
-    if state.promise_type == "vars" and node.type == "promise":
+
+
+def _lint_promise(node: Node, state: State, location: str, _syntax_data: SyntaxData):
+    """Check that a vars-promise has exactly one value-typed attribute (string, slist, ...)."""
+    assert node.type == "promise"
+    if state.promise_type == "vars":
         attribute_nodes = [x for x in node.children if x.type == "attribute"]
         # Attributes are children of a promise, and attribute names are children of attributes
         # Need to iterate inside to find the attribute name (data, ilist, int, etc.)
@@ -630,182 +651,294 @@ def _lint_node(
 
         if not value_nodes:
             # None of vars_types were found
-            _highlight_range(node, lines)
-            print(
-                f"Error: Missing value for vars promise {_text(node)[:-1]} {location}"
+            raise ValidationError(
+                f"Error: Missing value for vars promise {_text(node)[:-1]} {location}",
+                node,
             )
-            return 1
 
         if len(value_nodes) > 1:
             # Too many of vars_types was found
             # TODO: We could improve _highlight_range to highlight multiple nodes in a nice way
-            _highlight_range(value_nodes[-1], lines)
             nodes = ", ".join([_text(x) for x in value_nodes])
-            print(
+            raise ValidationError(
                 f"Error: Mutually exclusive attribute values ({nodes})"
-                f" for a single promiser inside vars-promise {location}"
+                f" for a single promiser inside vars-promise {location}",
+                value_nodes[-1],
             )
-            return 1
-    if node.type == "calling_identifier":
-        name = _text(node)
-        qualified_name = _qualify(name, state.namespace)
-        if (
-            state.strict
-            and qualified_name in state.bundles
-            and state.promise_type in state.custom_promise_types
+
+
+def _lint_calling_identifier(
+    node: Node, state: State, location: str, syntax_data: SyntaxData
+):
+    """Check that a function/bundle/body call name resolves correctly.
+
+    Behavior depends on context: nested calls must be built-in functions,
+    `IMPLIES_BUNDLE` / `IMPLIES_BODY` attributes restrict the kind of
+    definition allowed, and a few rules apply only inside vars-promises and
+    custom promise types.
+    """
+    assert node.type == "calling_identifier"
+    name = _text(node)
+    qualified_name = _qualify(name, state.namespace)
+    is_bundle = qualified_name in state.bundles
+    is_body = qualified_name in state.bodies
+    is_function = name in syntax_data.BUILTIN_FUNCTIONS
+
+    if state.inside_call:
+        # Nested calls must be built-in functions - the surrounding
+        # attribute's IMPLIES_BUNDLE/IMPLIES_BODY only applies to the
+        # outermost call.
+        if not is_function:
+            if is_bundle:
+                error = f"Error: Expected a built-in function but '{name}' is a bundle {location}"
+            elif is_body:
+                error = f"Error: Expected a built-in function but '{name}' is a body {location}"
+            else:
+                error = f"Error: Call to unknown function '{name}' {location}"
+            raise ValidationError(error, node)
+        return
+    if state.strict and is_bundle and state.promise_type in state.custom_promise_types:
+        raise ValidationError(
+            f"Error: Call to bundle '{name}' inside custom promise: '{state.promise_type}' {location}",
+            node,
+        )
+    if state.strict:
+        implies_bundle = state.attribute_name in IMPLIES_BUNDLE
+        implies_body = state.attribute_name in IMPLIES_BODY
+
+        error = None
+        if implies_bundle and not is_bundle:
+            if is_body:
+                error = f"Error: Expected a bundle but '{name}' is a body {location}"
+            elif is_function:
+                error = f"Error: Expected a bundle but '{name}' is a built-in function {location}"
+            else:
+                error = f"Error: Call to unknown bundle '{name}' {location}"
+        elif implies_body and not is_body:
+            if is_bundle:
+                error = f"Error: Expected a body but '{name}' is a bundle {location}"
+            elif is_function:
+                error = f"Error: Expected a body but '{name}' is a built-in function {location}"
+            else:
+                error = f"Error: Call to unknown body '{name}' {location}"
+        elif (
+            not implies_bundle
+            and not implies_body
+            and not is_bundle
+            and not is_body
+            and not is_function
         ):
-            _highlight_range(node, lines)
-            print(
-                f"Error: Call to bundle '{name}' inside custom promise: '{state.promise_type}' {location}"
+            error = (
+                f"Error: Call to unknown function / bundle / body '{name}' {location}"
             )
-            return 1
-        if state.strict and name not in syntax_data.BUILTIN_FUNCTIONS:
-            allowed_in_bundles = state.attribute_name not in IMPLIES_BODY
-            allowed_in_bodies = state.attribute_name not in IMPLIES_BUNDLE
-            found = (allowed_in_bundles and qualified_name in state.bundles) or (
-                allowed_in_bodies and qualified_name in state.bodies
-            )
-            if not found:
-                _highlight_range(node, lines)
-                print(
-                    f"Error: Call to unknown function / bundle / body '{name}' {location}"
-                )
-                return 1
-        if (
-            name not in syntax_data.BUILTIN_FUNCTIONS
-            and state.promise_type == "vars"
-            and state.attribute_name not in ("action", "classes")
-        ):
-            _highlight_range(node, lines)
-            print(
-                f"Error: Call to unknown function '{name}' inside 'vars'-promise {location}"
-            )
-            return 1
-        if (
-            state.promise_type == "vars"
-            and state.attribute_name in ("action", "classes")
-            and qualified_name not in state.bodies
-        ):
-            _highlight_range(node, lines)
-            print(
-                f"Error: '{name}' is not a defined body. Only bodies may be called with '{state.attribute_name}' {location}"
-            )
-            return 1
-    if node.type == "attribute_name" and state.promise_type and state.attribute_name:
+
+        if error:
+            raise ValidationError(error, node)
+    if (
+        not is_function
+        and state.promise_type == "vars"
+        and state.attribute_name not in ("action", "classes")
+    ):
+        raise ValidationError(
+            f"Error: Call to unknown function '{name}' inside 'vars'-promise {location}",
+            node,
+        )
+    if (
+        state.promise_type == "vars"
+        and state.attribute_name in ("action", "classes")
+        and not is_body
+    ):
+        raise ValidationError(
+            f"Error: '{name}' is not a defined body. Only bodies may be called with '{state.attribute_name}' {location}",
+            node,
+        )
+
+
+def _lint_attribute_name(
+    node: Node, state: State, location: str, syntax_data: SyntaxData
+):
+    """Check an attribute name for deprecations and validity according to the
+    surrounding promise type."""
+    assert node.type == "attribute_name"
+    if _text(node) == "ifvarclass":
+        raise ValidationError(
+            f"Deprecation: Use 'if' instead of 'ifvarclass' {location}", node
+        )
+    if state.promise_type and state.attribute_name:
         promise_type_data = syntax_data.BUILTIN_PROMISE_TYPES.get(
             state.promise_type, {}
         )
         if not promise_type_data:
             # Custom promise type - we cannot validate attribute name here.
-            return 0
+            return
         promise_type_attrs = promise_type_data.get("attributes", {})
         if state.attribute_name not in promise_type_attrs:
-            _highlight_range(node, lines)
-            print(
-                f"Error: Invalid attribute '{state.attribute_name}' for promise type '{state.promise_type}' {location}"
+            raise ValidationError(
+                f"Error: Invalid attribute '{state.attribute_name}' for promise type '{state.promise_type}' {location}",
+                node,
             )
-            return 1
-    if (
-        state.block_keyword == "promise"
-        and node.type == "attribute_name"
-        and state.attribute_name not in (None, *PROMISE_BLOCK_ATTRIBUTES)
+    if state.block_keyword == "promise" and state.attribute_name not in (
+        None,
+        *PROMISE_BLOCK_ATTRIBUTES,
     ):
-        _highlight_range(node, lines)
-        print(
-            f"Error: Invalid attribute name '{state.attribute_name}' in '{state.block_name}' custom promise type definition {location}"
-        )
-        return 1
-    if node.type == "call":
-        call, _, *args, _ = node.children  # f ( a1 , a2 , a..N )
-        call = _text(call)
-        if call in KNOWN_FAULTY_FUNCTION_DEFS:
-            return 0
-
-        args = list(
-            filter(",".__ne__, iter(_text(x) for x in args if x.type != "comment"))
+        raise ValidationError(
+            f"Error: Invalid attribute name '{state.attribute_name}' in '{state.block_name}' custom promise type definition {location}",
+            node,
         )
 
-        if call in syntax_data.BUILTIN_FUNCTIONS:
-            func = syntax_data.BUILTIN_FUNCTIONS.get(call, {})
-            variadic = func.get("variadic", True)
-            # variadic meaning variable amount of arguments allowed
-            # -1, -1 // default -- all required, aka. non-variadic func
-            # 1, -1  // 1-n
-            # 0, -1  // 0-n
-            # 2, 3   // 2-3
-            min_args = func.get("minArgs", -1)
-            max_args = func.get("maxArgs", -1)
-            if variadic:
-                assert min_args != -1
-                assert min_args != max_args
-                if max_args == -1:
-                    max_args = float("inf")  # N args allowed
-            else:
-                assert min_args == -1 and max_args == -1
-                # If min args -1 (meaning all required), max should be the same
-                # All args required, use len of parameter list
-                min_args = max_args = len(func.get("parameters", []))
 
-            if not (min_args <= len(args) <= max_args):
-                _highlight_range(node, lines)
-                argc_str = (
-                    f"at least {min_args}"
-                    if max_args == float("inf")
-                    else (
-                        f"{min_args}-{max_args}"
-                        if min_args != max_args
-                        else str(max_args)
-                    )
-                )
-                print(
-                    f"Error: Expected {argc_str} arguments, received {len(args)} for function '{call}' {location}"
-                )
-                return 1
+def _lint_call(node: Node, state: State, location: str, syntax_data: SyntaxData):
+    """Check a call's argument count against its built-in / bundle / body signature."""
+    call, _, *args, _ = node.children  # f ( a1 , a2 , a..N )
+    call = _text(call)
+    if call in KNOWN_FAULTY_FUNCTION_DEFS:
+        return
 
-        qualified_name = _qualify(call, state.namespace)
-        if qualified_name in state.bundles and state.attribute_name not in IMPLIES_BODY:
-            definitions = state.bundles[qualified_name]
-            valid_counts = {len(d.get("parameters", [])) for d in definitions}
-            if len(args) not in valid_counts:
-                _highlight_range(node, lines)
-                counts = sorted(valid_counts)
-                expected = " or ".join(str(c) for c in counts)
-                print(
-                    f"Error: Expected {expected} arguments, received {len(args)} for bundle '{call}' {location}"
+    args = list(filter(",".__ne__, iter(_text(x) for x in args if x.type != "comment")))
+
+    if call in syntax_data.BUILTIN_FUNCTIONS and (
+        state.inside_call
+        or (
+            state.attribute_name not in IMPLIES_BUNDLE
+            and state.attribute_name not in IMPLIES_BODY
+        )
+    ):
+        func = syntax_data.BUILTIN_FUNCTIONS.get(call, {})
+        variadic = func.get("variadic", True)
+        # variadic meaning variable amount of arguments allowed
+        # -1, -1 // default -- all required, aka. non-variadic func
+        # 1, -1  // 1-n
+        # 0, -1  // 0-n
+        # 2, 3   // 2-3
+        min_args = func.get("minArgs", -1)
+        max_args = func.get("maxArgs", -1)
+        if variadic:
+            assert min_args != -1
+            assert min_args != max_args
+            if max_args == -1:
+                max_args = float("inf")  # N args allowed
+        else:
+            assert min_args == -1 and max_args == -1
+            # If min args -1 (meaning all required), max should be the same
+            # All args required, use len of parameter list
+            min_args = max_args = len(func.get("parameters", []))
+
+        if not (min_args <= len(args) <= max_args):
+            argc_str = (
+                f"at least {min_args}"
+                if max_args == float("inf")
+                else (
+                    f"{min_args}-{max_args}" if min_args != max_args else str(max_args)
                 )
-                return 1
-        if (
-            qualified_name in state.bodies
-            and state.attribute_name not in IMPLIES_BUNDLE
-        ):
-            definitions = state.bodies[qualified_name]
-            valid_counts = {len(d.get("parameters", [])) for d in definitions}
-            if len(args) not in valid_counts:
-                _highlight_range(node, lines)
-                counts = sorted(valid_counts)
-                expected = " or ".join(str(c) for c in counts)
-                print(
-                    f"Error: Expected {expected} arguments, received {len(args)} for body '{call}' {location}"
-                )
-                return 1
+            )
+            raise ValidationError(
+                f"Error: Expected {argc_str} arguments, received {len(args)} for function '{call}' {location}",
+                node,
+            )
+
+    qualified_name = _qualify(call, state.namespace)
+    if (
+        not state.inside_call
+        and qualified_name in state.bundles
+        and state.attribute_name not in IMPLIES_BODY
+    ):
+        definitions = state.bundles[qualified_name]
+        valid_counts = {len(d.get("parameters", [])) for d in definitions}
+        if len(args) not in valid_counts:
+            counts = sorted(valid_counts)
+            expected = " or ".join(str(c) for c in counts)
+            raise ValidationError(
+                f"Error: Expected {expected} arguments, received {len(args)} for bundle '{call}' {location}",
+                node,
+                [_definition_hint("bundle", call, definitions)],
+            )
+    if (
+        not state.inside_call
+        and qualified_name in state.bodies
+        and state.attribute_name not in IMPLIES_BUNDLE
+    ):
+        definitions = state.bodies[qualified_name]
+        valid_counts = {len(d.get("parameters", [])) for d in definitions}
+        if len(args) not in valid_counts:
+            counts = sorted(valid_counts)
+            expected = " or ".join(str(c) for c in counts)
+            raise ValidationError(
+                f"Error: Expected {expected} arguments, received {len(args)} for body '{call}' {location}",
+                node,
+                [_definition_hint("body", call, definitions)],
+            )
+
+
+def _lint_half_promise(node: Node, state: State, location: str):
+    """Check if a half-promise (a promise split by a macro) is well-formed.
+
+    Half-promises are only valid as macro branches, and only one half-promise
+    is allowed per macro branch.
+    """
+    assert node.type == "half_promise"
+
+    prev_sib = node.prev_named_sibling
+    while prev_sib and prev_sib.type == "comment":
+        prev_sib = prev_sib.prev_named_sibling
+    prev_type = prev_sib.type if prev_sib else None
+    if not state.macro:
+        raise ValidationError(
+            f"Error: Found promise attribute with no parent-promiser outside of a macro {location}",
+            node,
+        )
+    elif prev_type != "macro":
+        raise ValidationError(
+            f"Error: Multiple promise attributes with ending semicolon found inside macro '{state.macro}' {location}",
+            node,
+        )
+
+
+def _lint_node(
+    node: Node, policy_file: PolicyFile, state: State, syntax_data: SyntaxData
+) -> None:
+    """Checks we run on each node in the syntax tree,
+    utilizes state for checks which require context.
+
+    Raises ValidationError when a check fails. The exception carries the node
+    to highlight, the error message, and any hint lines; the caller renders
+    them.
+    """
+
+    line = node.range.start_point[0] + 1
+    column = node.range.start_point[1] + 1
+    location = state.get_location_extended(line, column)
+
+    if node.type in ("bundle_block_type", "body_block_type", "promise_block_type"):
+        # The type is what comes after body / bundle / promise keyword
+        # and before the name. Ex: common, agent, copy_from, classes
+        _lint_block_type(node, state, location, syntax_data)
+    if node.type in ("bundle_block_name", "body_block_name", "promise_block_name"):
+        # The name of the bundle, body, or promise type (where it's defined).
+        _lint_block_name(node, state, location, syntax_data)
+    if node.type == "promise_guard":
+        # The promise guard is the beginning of a section inside a bundle,
+        # or, in other words, the promise type + one colon
+        _lint_promise_guard(node, state, location, syntax_data)
+    if node.type == "promise":
+        # The promise node has the promiser, stakeholder, and all the attributes
+        # inside (as children).
+        _lint_promise(node, state, location, syntax_data)
     if node.type == "half_promise":
-        prev_sib = node.prev_named_sibling
-        while prev_sib and prev_sib.type == "comment":
-            prev_sib = prev_sib.prev_named_sibling
-        prev_type = prev_sib.type if prev_sib else None
-        if not state.macro:
-            _highlight_range(node, lines)
-            print(
-                f"Error: Found promise attribute with no parent-promiser outside of a macro {location}"
-            )
-            return 1
-        elif prev_type != "macro":
-            _highlight_range(node, lines)
-            print(
-                f"Error: Multiple promise attributes with ending semicolon found inside macro '{state.macro}' {location}"
-            )
-            return 1
-    return 0
+        # A half promise is an artifact of how a macro can split up a promise
+        # into 2 branching parts (3 parts in total).
+        _lint_half_promise(node, state, location)
+    if node.type == "attribute_name":
+        # Attribute name nodes refer to all the cases; inside a body, inside
+        # a promise block and inside a bundle (inside a promise).
+        _lint_attribute_name(node, state, location, syntax_data)
+    if node.type == "call":
+        # A call is a bare name (not inside quotes) plus parentheses,
+        # optionally with arguments inside, or even nested function calls.
+        _lint_call(node, state, location, syntax_data)
+    if node.type == "calling_identifier":
+        # A calling identifier is the name of the function / body / bundle
+        # that is being called, the part before the parentheses
+        _lint_calling_identifier(node, state, location, syntax_data)
 
 
 def _pass_fail_filename(filename: str, errors: int) -> str:
@@ -834,7 +967,14 @@ def _lint(policy_file: PolicyFile, state: State, syntax_data: SyntaxData) -> int
     state.start_file(policy_file)
     for node in policy_file.nodes:
         state.navigate(node)
-        errors += _lint_node(node, policy_file, state, syntax_data)
+        try:
+            _lint_node(node, policy_file, state, syntax_data)
+        except ValidationError as e:
+            _highlight_range(e.node, policy_file.lines)
+            print(e.message)
+            for hint in e.hints:
+                print(hint)
+            errors += 1
     message = _pass_fail_state(state, errors)
     state.end_file()
     if state.prefix:
@@ -896,6 +1036,10 @@ def filter_filenames(filenames: Iterable[str], args: list[str]) -> Iterable[str]
 
 
 def _lint_check_args(args: list[str]):
+    """Validate user-supplied paths exist, are file/folder, and have a supported extension.
+
+    Raises UserError on invalid input.
+    """
     for i, arg in enumerate(args):
         if not os.path.exists(arg):
             raise UserError(f"'{arg}' does not exist")
@@ -1079,6 +1223,14 @@ def _text(node: Node) -> str:
     return node.text.decode()
 
 
+def _definition_hint(kind: str, name: str, definitions: list[dict]) -> str:
+    """Build a single 'Hint:' line, joining all definition locations with ' and '."""
+    locations = " and ".join(
+        f"{d['filename']}:{d['line']}:{d['column']}" for d in definitions
+    )
+    return f"Hint: The {kind} '{name}' is defined at {locations}"
+
+
 def _walk_callback(node: Node, callback: Callable[[Node], int]) -> int:
     """Recursively walk a syntax tree, calling the callback on each node."""
     assert node
@@ -1167,10 +1319,26 @@ class PolicySyntaxError(Exception):
     """Raised when a policy file has syntax errors and cannot be formatted."""
 
     def __init__(self, filename: str, line: int, column: int):
+        """Record the location of the syntax error and format a default message."""
         self.filename = filename
         self.line = line
         self.column = column
         super().__init__(f"Syntax error in '{filename}' at {filename}:{line}:{column}")
+
+
+class ValidationError(Exception):
+    """Raised by _lint_node when a linting check fails.
+
+    Carries the node to highlight, the error message, and any hint lines so
+    the caller can render them.
+    """
+
+    def __init__(self, message: str, node: Node, hints: list[str] | None = None):
+        """Store the error message, the node to highlight, and any hint lines."""
+        self.message = message
+        self.node = node
+        self.hints = hints or []
+        super().__init__(message)
 
 
 def check_policy_syntax(tree: Tree, filename: str) -> None:
@@ -1231,4 +1399,5 @@ def lint_policy_file_snippet(
 
 
 def lint_json(filename: str) -> int:
+    """Lint a single JSON file (cfbs.json gets cfbs validation, others basic parse)."""
     return _lint_json_selector(filename)
